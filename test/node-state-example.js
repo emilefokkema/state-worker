@@ -20,5 +20,5 @@ const queries = {
 	}
 };
 
-module.exports ={setState, getState, commands, queries}
+module.exports = {setState, getState, commands, queries}
 

@@ -4,7 +4,7 @@
   "description": "Share a state between processes, change it an query it",
   "main": "dist/state-worker.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test-node": "node ./test/test-in-node",
     "build": "webpack --config ./webpack.config.production.js"
   },
   "keywords": [
