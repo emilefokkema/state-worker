@@ -10,5 +10,8 @@
     "state"
   ],
   "author": "Emile Fokkema",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "webpack": "^5.68.0"
+  }
 }
