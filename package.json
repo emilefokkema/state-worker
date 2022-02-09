@@ -1,0 +1,14 @@
+{
+  "name": "state-worker",
+  "version": "0.0.1-alpha",
+  "description": "Share a state between processes, change it an query it",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "state"
+  ],
+  "author": "Emile Fokkema",
+  "license": "ISC"
+}
