@@ -2,9 +2,10 @@
   "name": "state-worker",
   "version": "0.0.1-alpha",
   "description": "Share a state between processes, change it an query it",
-  "main": "dist/index.js",
+  "main": "dist/state-worker.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack --config ./webpack.config.production.js"
   },
   "keywords": [
     "state"
@@ -12,6 +13,7 @@
   "author": "Emile Fokkema",
   "license": "ISC",
   "devDependencies": {
-    "webpack": "^5.68.0"
+    "webpack": "^5.68.0",
+    "webpack-cli": "^4.9.2"
   }
 }
