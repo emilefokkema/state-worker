@@ -9,5 +9,8 @@ module.exports = {
 		libraryTarget: 'umd',
 		globalObject: 'this'
 	},
+	externals: {
+		child_process: 'child_process'
+	},
 	mode: 'production'
 }

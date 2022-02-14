@@ -1,10 +1,12 @@
+const { fork } = require('child_process')
+
 class NodeStateWorkerInstance{
 	constructor(path){
 		this.path = path;
 		this.process = undefined;
 	}
 	async initialize(){
-
+		
 	}
 }
 
