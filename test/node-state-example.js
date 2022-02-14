@@ -1,24 +1,17 @@
-let state = 2;
-
-function setState(_state){
-	state = _state;
-}
-
-function getState(){
-	return state;
-}
-
 const commands = {
+	initialize(state){
+		this.state = state;
+	},
 	multiplyBy(x){
-		state = x * state;
+		this.state = x * this.state;
 	}
 };
 
 const queries = {
 	getDifferenceWith(y){
-		return y - state;
+		return y - this.state;
 	}
 };
 
-module.exports = {setState, getState, commands, queries}
+module.exports = {commands, queries}
 
