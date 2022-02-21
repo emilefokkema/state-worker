@@ -10,7 +10,8 @@ module.exports = {
 		globalObject: 'this'
 	},
 	externals: {
-		child_process: 'child_process'
+		child_process: 'child_process',
+		path: 'path'
 	},
 	mode: 'production'
 }

@@ -1,43 +1,51 @@
-const { fork } = require('child_process')
+const { fork } = require('child_process');
 
 class NodeStateWorkerInstance{
-	constructor(path){
-		this.path = path;
+	constructor(childProcessScriptPath, scriptPath){
+		this.childProcessScriptPath = childProcessScriptPath;
+		this.scriptPath = scriptPath;
 		this.process = undefined;
 	}
-	initialize(){
-		return new Promise((res, rej) => {
-			console.log('creating child process')
-			try{
-				this.process = fork('./node-state-worker-child-process.js', [], {
-					stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ],
-					serialization: 'advanced'
-				});
-				this.process.stdout.on('data', (data) => {
-					console.log(data.toString())
-					res();
-				});
-				this.process.on('error', (err) => {
-					console.log('child process error: rejecting the promise')
-					rej(err);
-				});
-				this.process.stderr.on('data', (data) => {
-					console.log('data from stderr')
-					console.log(data.toString())
-				});
-				this.process.on('exit', (code, signal) => {
-					if(code === 0){
-						return res();
-					}
-					console.log('exit: rejecting the promise')
-					rej();
-				});
-			}catch(e){
-				console.log(e)
-			}
-			
-		})
-		
+	whenReceivedMessageOfType(type){
+		return new Promise((res) => {
+			const listener = (msg) => {
+				if(msg.type === type){
+					this.process.removeListener('message', listener);
+					res(msg);
+				}
+			};
+			this.process.addListener('message', listener);
+		});
+	}
+	createProcess(){
+		this.process = fork(this.childProcessScriptPath, [], {
+			stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ],
+			serialization: 'advanced'
+		});
+		this.process.stdout.on('data', (data) => {
+			console.log(data.toString())
+		});
+		this.process.on('error', (err) => {
+			console.log('child process error', err)
+		});
+		this.process.stderr.on('data', (data) => {
+			console.log('data from stderr')
+			console.log(data.toString())
+		});
+		this.process.on('exit', (code, signal) => {
+			console.log('child process has exited')
+		});
+	}
+	async initialize(){
+		this.createProcess();
+		await this.whenReceivedMessageOfType('started');
+		const initializedPromise = this.whenReceivedMessageOfType('initialized');
+		this.process.send({type: 'initialize', path: this.scriptPath});
+		const result = await initializedPromise;
+		if(result.error){
+			throw new Error(result.error);
+		}
+		console.log('result', result)
 	}
 }
 

@@ -1,6 +1,6 @@
 const path = require('path')
 const { NodeStateWorker } = require('../src/node-state-worker')
-const example1 = {
+const example2 = {
 	path: './node-state-example.js',
 	sequence: [
 		{
@@ -23,7 +23,7 @@ async function executePartOfSequence(part, worker){
 }
 async function runExample(example){
 	try{
-		const resolvedPath = path.resolve(example.path);
+		const resolvedPath = path.resolve(__dirname, example.path);
 		const worker = await NodeStateWorker.create(resolvedPath, {maxNumberOfProcesses: 2});
 		for(let part of example.sequence){
 			executePartOfSequence(part, worker).catch((e) => {
@@ -34,6 +34,7 @@ async function runExample(example){
 	}catch(e){
 		console.log(e)
 	}
+	console.log('done running example')
 }
 
-runExample(example1);
+runExample(example2).then(() => process.exit(0));
