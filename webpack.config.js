@@ -13,5 +13,8 @@ module.exports = {
 		child_process: 'child_process',
 		path: 'path'
 	},
+	node: {
+		__dirname: false
+	},
 	mode: 'production'
 }

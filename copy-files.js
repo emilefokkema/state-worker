@@ -1,3 +1,3 @@
 const fs = require('fs');
 
-fs.copyFileSync('./src/node-state-worker-child-process.js', './dist/node-state-worker-child-process.js');
+fs.copyFileSync('./src/req.js', './dist/req.js');

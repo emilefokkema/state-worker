@@ -5,7 +5,7 @@
   "main": "dist/state-worker.js",
   "scripts": {
     "test-node": "node ./test/test-in-node",
-    "build": "webpack --config ./webpack.config.js && node ./copy-files.js"
+    "build": "node ./copy-files.js && webpack --config ./webpack.config.js && webpack --config ./webpack.child-process.config.js"
   },
   "keywords": [
     "state"

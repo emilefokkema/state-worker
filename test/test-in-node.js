@@ -1,5 +1,5 @@
 const path = require('path')
-const { NodeStateWorker } = require('../src/node-state-worker')
+const { NodeStateWorker } = require('../dist/state-worker')
 const example1 = {
 	path: './node-state-example-1.js',
 	initializationError: true

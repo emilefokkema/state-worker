@@ -6,7 +6,7 @@ class NodeStateWorker{
 	constructor(){
 	}
 	static async create(scriptPath, config){
-		const stateWorkerInstancePath = path.resolve(__dirname, './node-state-worker-child-process.js');
+		const stateWorkerInstancePath = path.resolve(__dirname, './child-process.js');
 		const manager = StateWorkerInstanceManager.create(() => new NodeStateWorkerInstance(stateWorkerInstancePath, scriptPath), config);
 		const methodCollection = await manager.initialize();
 		return new NodeStateWorker();
