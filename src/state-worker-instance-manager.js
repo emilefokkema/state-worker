@@ -6,7 +6,8 @@ class StateWorkerInstanceManager{
     }
     async initialize(){
         const instance = this.instanceFactory();
-        const result = await instance.initialize();
+        const methodCollection = await instance.initialize();
+        console.log('method collection:', methodCollection)
     }
     static create(instanceFactory, config){
         return new StateWorkerInstanceManager(instanceFactory, config.maxNumberOfProcesses);

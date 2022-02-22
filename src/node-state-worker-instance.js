@@ -45,7 +45,7 @@ class NodeStateWorkerInstance{
 		if(result.error){
 			throw new Error(result.error);
 		}
-		console.log('result', result)
+		return result.methodCollection;
 	}
 }
 
