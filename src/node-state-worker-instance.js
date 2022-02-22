@@ -1,4 +1,4 @@
-const { fork } = require('child_process');
+const cp = require('child_process');
 
 class NodeStateWorkerInstance{
 	constructor(childProcessScriptPath, scriptPath){
@@ -18,7 +18,7 @@ class NodeStateWorkerInstance{
 		});
 	}
 	createProcess(){
-		this.process = fork(this.childProcessScriptPath, [], {
+		this.process = cp.fork(this.childProcessScriptPath, [], {
 			stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ],
 			serialization: 'advanced'
 		});

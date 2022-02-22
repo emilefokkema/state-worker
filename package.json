@@ -5,7 +5,9 @@
   "main": "dist/state-worker.js",
   "scripts": {
     "test-node": "node ./test/test-in-node",
-    "build": "node ./copy-files.js && webpack --config ./webpack.config.js && webpack --config ./webpack.child-process.config.js"
+    "test-web": "npm run build-dev && node ./test/copy-files-web-test.js && npx http-server ./test/web-test",
+    "build": "node ./copy-files.js && webpack --config ./webpack.config.js && webpack --config ./webpack.child-process.config.js",
+    "build-dev": "node ./copy-files.js && webpack --config ./webpack.config.js --mode=development && webpack --config ./webpack.child-process.config.js --mode=development"
   },
   "keywords": [
     "state"
@@ -13,6 +15,7 @@
   "author": "Emile Fokkema",
   "license": "ISC",
   "devDependencies": {
+    "http-server": "^14.1.0",
     "webpack": "^5.68.0",
     "webpack-cli": "^4.9.2"
   }
