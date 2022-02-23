@@ -1,7 +1,7 @@
 const path = require('path');
 
 module.exports = {
-	entry: './src/node-state-worker-child-process.js',
+	entry: './src/node/state-worker-child-script.js',
 	output: {
 		filename: 'child-process.js',
 		path: path.resolve(__dirname, 'dist')

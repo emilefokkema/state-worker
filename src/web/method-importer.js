@@ -1,5 +1,3 @@
-import req from './req';
-
 export class WebMethodImporter{
     async importMethods(config, baseURI){
         const url = new URL(config.path, baseURI);

@@ -1,12 +1,14 @@
-const { WebStateWorker } = require('./web-state-worker');
-const { NodeStateWorker} = require('./node-state-worker');
+const { instanceFactory: nodeStateWorkerInstanceFactory } = require('./node/instance-factory');
+const { instanceFactory: webStateWorkerInstanceFactory } = require('./web/instance-factory');
+const { StateWorkerInstanceManager } = require('./state-worker-instance-manager');
+
 
 class StateWorker{
-    static create(scriptPath, config){
-        if(typeof window === 'undefined'){
-            return NodeStateWorker.create(scriptPath, config);
-        }
-        return WebStateWorker.create(scriptPath, config);
+    static async create(config){
+        const instanceFactory = typeof window === 'undefined' ? nodeStateWorkerInstanceFactory : webStateWorkerInstanceFactory;
+        const manager = StateWorkerInstanceManager.create(() => instanceFactory(config), config);
+        const methodCollection = await manager.initialize();
+        return new StateWorker();
     }
 }
 

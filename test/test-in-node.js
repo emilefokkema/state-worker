@@ -28,7 +28,6 @@ function createWorker(example){
 	return StateWorker.create({maxNumberOfProcesses: 2, path: resolvedPath});
 }
 
-runExamples([example2], createWorker).then(() => process.exit(0)).catch((e) => {
-	console.error(e);
+runExamples([example1, example2], createWorker).then(() => process.exit(0)).catch(() => {
 	process.exit(1);
 });

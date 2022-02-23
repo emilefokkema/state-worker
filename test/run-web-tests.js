@@ -35,4 +35,4 @@ function createWorker(example){
     return StateWorker.create({maxNumberOfProcesses: 2, path: example.path, module: example.module})
 }
 
-runExamples([example2], createWorker).catch(e => console.log(e))
+runExamples([example1, example2], createWorker).catch(e => console.error(e))

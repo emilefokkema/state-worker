@@ -41,11 +41,19 @@ async function runExample(example, workerFactory){
 }
 
 async function runExamples(examples, workerFactory){
-	for(let example of examples){
+	let hasError = false;
+	for(let i = 0; i < examples.length; i++){
+		const example = examples[i];
 		const result = await runExample(example, workerFactory);
 		if(result.error){
-			throw new Error(result.error);
+			console.error(`Error from running example ${i}: ${result.error}`);
+			hasError = true;
+		}else{
+			console.log(`Example ${i} ran successfully`)
 		}
+	}
+	if(hasError){
+		throw new Error(`not all test cases succeeded`)
 	}
 }
 

@@ -1,4 +1,4 @@
-class StateWorkerInstanceManager{
+export class StateWorkerInstanceManager{
     constructor(instanceFactory, maxNumberOfProcesses){
         this.instanceFactory = instanceFactory;
         this.maxNumberOfProcesses = maxNumberOfProcesses;
@@ -13,5 +13,3 @@ class StateWorkerInstanceManager{
         return new StateWorkerInstanceManager(instanceFactory, config.maxNumberOfProcesses);
     }
 }
-
-module.exports = { StateWorkerInstanceManager };
