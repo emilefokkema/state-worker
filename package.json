@@ -14,8 +14,8 @@
     "build:web-child-dev": "webpack --config ./webpack.web-child-process.config.js --mode=development",
     "build:node-child": "webpack --config ./webpack.node-child-process.config.js",
     "build:node-child-dev": "webpack --config ./webpack.node-child-process.config.js --mode=development",
-    "build": "npm run copy-files && npm run build:web-child && npm run build:main && npm run replace-script && npm run build:node-child",
-    "build-dev": "npm run copy-files && npm run build:web-child-dev && npm run build:main-dev && npm run replace-script && npm run build:node-child-dev"
+    "build": "npm run build:web-child && npm run copy-files && npm run build:main && npm run replace-script && npm run build:node-child",
+    "build-dev": "npm run build:web-child-dev && npm run copy-files && npm run build:main-dev && npm run replace-script && npm run build:node-child-dev"
   },
   "keywords": [
     "state"
