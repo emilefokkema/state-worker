@@ -1,13 +1,14 @@
 const path = require('path');
 
 module.exports = {
-	entry: './src/node-state-worker-child-process.js',
+	entry: './src/web-state-worker-child-process.js',
 	output: {
-		filename: 'child-process.js',
+		filename: 'web-child-process.js',
 		path: path.resolve(__dirname, 'dist')
 	},
 	externals: {
-		'./req': 'commonjs-module ./req'
+		'./req': 'root req'
 	},
+	devtool: false,
 	mode: 'production'
 }

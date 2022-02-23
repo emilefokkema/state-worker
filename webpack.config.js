@@ -16,5 +16,6 @@ module.exports = {
 	node: {
 		__dirname: false
 	},
+	devtool: false,
 	mode: 'production'
 }

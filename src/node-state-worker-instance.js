@@ -1,9 +1,9 @@
 const cp = require('child_process');
 
-class NodeStateWorkerInstance{
-	constructor(childProcessScriptPath, scriptPath){
+class NodeStateWorkerInstance {
+	constructor(childProcessScriptPath, config){
 		this.childProcessScriptPath = childProcessScriptPath;
-		this.scriptPath = scriptPath;
+		this.config = config;
 		this.process = undefined;
 	}
 	whenReceivedMessageOfType(type){
@@ -40,7 +40,7 @@ class NodeStateWorkerInstance{
 		this.createProcess();
 		await this.whenReceivedMessageOfType('started');
 		const initializedPromise = this.whenReceivedMessageOfType('initialized');
-		this.process.send({type: 'initialize', path: this.scriptPath});
+		this.process.send({type: 'initialize', config: this.config});
 		const result = await initializedPromise;
 		if(result.error){
 			throw new Error(result.error);

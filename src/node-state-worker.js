@@ -5,9 +5,9 @@ const { StateWorkerInstanceManager } = require('./state-worker-instance-manager'
 class NodeStateWorker{
 	constructor(){
 	}
-	static async create(scriptPath, config){
+	static async create(config){
 		const stateWorkerInstancePath = path.resolve(__dirname, './child-process.js');
-		const manager = StateWorkerInstanceManager.create(() => new NodeStateWorkerInstance(stateWorkerInstancePath, scriptPath), config);
+		const manager = StateWorkerInstanceManager.create(() => new NodeStateWorkerInstance(stateWorkerInstancePath, config), config);
 		const methodCollection = await manager.initialize();
 		return new NodeStateWorker();
 	}

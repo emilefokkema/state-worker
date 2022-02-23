@@ -5,9 +5,17 @@
   "main": "dist/state-worker.js",
   "scripts": {
     "test-node": "node ./test/test-in-node",
-    "test-web": "npm run build-dev && node ./test/copy-files-web-test.js && npx http-server ./test/web-test",
-    "build": "node ./copy-files.js && webpack --config ./webpack.config.js && webpack --config ./webpack.child-process.config.js",
-    "build-dev": "node ./copy-files.js && webpack --config ./webpack.config.js --mode=development && webpack --config ./webpack.child-process.config.js --mode=development"
+    "test-web": "npm run build-dev && webpack --config ./webpack.web-tests.config.js && node ./test/copy-files-web-test.js && npx http-server ./test/web-test",
+    "copy-files": "node ./copy-files.js",
+    "replace-script": "node ./replace-script.js",
+    "build:main": "webpack --config ./webpack.config.js",
+    "build:main-dev": "webpack --config ./webpack.config.js --mode=development",
+    "build:web-child": "webpack --config ./webpack.web-child-process.config.js",
+    "build:web-child-dev": "webpack --config ./webpack.web-child-process.config.js --mode=development",
+    "build:node-child": "webpack --config ./webpack.node-child-process.config.js",
+    "build:node-child-dev": "webpack --config ./webpack.node-child-process.config.js --mode=development",
+    "build": "npm run copy-files && npm run build:web-child && npm run build:main && npm run replace-script && npm run build:node-child",
+    "build-dev": "npm run copy-files && npm run build:web-child-dev && npm run build:main-dev && npm run replace-script && npm run build:node-child-dev"
   },
   "keywords": [
     "state"
