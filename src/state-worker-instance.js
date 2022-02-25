@@ -4,6 +4,13 @@ export class StateWorkerInstance {
 		this.processFactory = processFactory;
 		this.config = config;
 		this.process = undefined;
+		this.busy = false;
+	}
+	terminate(){
+		if(this.process){
+			this.process.terminate();
+			this.process = undefined;
+		}
 	}
 	whenReceivedMessageOfType(type){
 		return new Promise((res) => {

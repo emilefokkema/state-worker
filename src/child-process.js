@@ -16,6 +16,10 @@ export function start(importer, parentProcess){
             }
             const queryNames = Object.getOwnPropertyNames(queries);
             const commandNames = Object.getOwnPropertyNames(commands);
+            if(queryNames.includes('terminate') || commandNames.includes('terminate')){
+                parentProcess.sendMessage({type: initializedType, error: `'terminate' cannot be used as the name of a command or a query`});
+                return;
+            }
             parentProcess.sendMessage({type: initializedType, methodCollection: {queries: queryNames, commands: commandNames}})
         }catch(e){
             parentProcess.sendMessage({type: initializedType, error: e.toString()});

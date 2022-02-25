@@ -4,6 +4,9 @@ class NodeChildProcess{
     constructor(process){
         this.process = process;
     }
+    terminate(){
+        this.process.kill();
+    }
     sendMessage(msg){
         this.process.send(msg);
     }

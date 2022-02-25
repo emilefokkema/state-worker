@@ -1,19 +1,54 @@
+function runWithTimeout(fn, timeout, errorMessage){
+	let timeoutCancelled = false;
+	const timeoutPromise = new Promise((res, rej) => {
+		setTimeout(() => {
+			if(!timeoutCancelled){
+				rej(errorMessage);
+			}else{
+				res();
+			}
+		}, timeout);
+	});
+	const fnPromise = fn().then((result) => {
+		timeoutCancelled = true;
+		return result;
+	}, (e) => {
+		timeoutCancelled = true;
+		throw e;
+	});
+	return Promise.race([timeoutPromise, fnPromise]);
+}
+
 async function executePartOfSequence(part, worker){
 	if(part.query){
 		try{
-			const result = await worker[part.query].apply(worker, part.args)
+			const result = await runWithTimeout(() => worker[part.query].apply(worker, part.args), 2000, `Timeout exceeded`);
+			console.log(`result of query '${part.query}' was`, result)
 		}catch(e){
 			return {error: `Error when executing query '${part.query}': ${e}`}
 		}
 		return {};
 	}else if(part.command){
 		try{
-			await worker[part.command].apply(worker, part.args);
+			await runWithTimeout(() => worker[part.command].apply(worker, part.args), 2000, `Timeout exceeded`);
+			console.log(`successfully executed command '${part.command}'`)
 		}catch(e){
 			return {error: `Error when executing command '${part.command}': ${e}`}
 		}
 		return {};
 	}
+}
+
+async function executeSequence(sequence, worker){
+	const sequencePromises = sequence.map(part => ({part, promise: executePartOfSequence(part, worker)}));
+	for(let i = 0; i < sequencePromises.length; i++){
+		const partPromise = sequencePromises[i];
+		const partResult = await partPromise.promise;
+		if(partResult.error){
+			return {error: `Error from part ${i} of sequence: ${partResult.error}`}
+		}
+	}
+	return {};
 }
 
 async function runExample(example, workerFactory){
@@ -29,13 +64,18 @@ async function runExample(example, workerFactory){
 	if(example.initializationError){
 		return {error: 'Expected an error to have been thrown from initialization, but none was thrown.'}
 	}
-	const sequencePromises = example.sequence.map(part => ({part, promise: executePartOfSequence(part, worker)}));
-	for(let i = 0; i < sequencePromises.length; i++){
-		const partPromise = sequencePromises[i];
-		const partResult = await partPromise.promise;
-		if(partResult.error){
-			return {error: `Error from part ${i} of sequence: ${partResult.error}`}
+	const sequenceResult = await executeSequence(example.sequence || [], worker);
+	try{
+		worker.terminate();
+	}catch(e){
+		console.log('error terminating worker', e)
+		if(sequenceResult.error){
+			return sequenceResult;
 		}
+		return {error: `Failed to terminate worker: ${e}`};
+	}
+	if(sequenceResult.error){
+		return sequenceResult;
 	}
 	return {};
 }

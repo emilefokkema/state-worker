@@ -3,6 +3,12 @@ export class WebChildProcess{
         this.worker = worker;
         this.listeners = [];
     }
+    terminate(){
+        if(this.worker){
+            this.worker.terminate();
+            this.worker = undefined;
+        }
+    }
     sendMessage(msg){
         this.worker.postMessage(msg);
     }

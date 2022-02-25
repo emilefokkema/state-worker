@@ -20,6 +20,10 @@ const example2 = {
 		}
 	]
 }
+const example3 = {
+	path: './node-state-example-3.js',
+	initializationError: true
+};
 
 
 
@@ -28,6 +32,6 @@ function createWorker(example){
 	return StateWorker.create({maxNumberOfProcesses: 2, path: resolvedPath});
 }
 
-runExamples([example1, example2], createWorker).then(() => process.exit(0)).catch(() => {
+runExamples([example2], createWorker).then(() => process.exit(0)).catch(() => {
 	process.exit(1);
 });

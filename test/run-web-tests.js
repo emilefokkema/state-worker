@@ -30,9 +30,12 @@ const example2 = {
 		}
 	]
 };
+const example3 = {
+	path: 'web-state-example-3.js'
+};
 
 function createWorker(example){
     return StateWorker.create({maxNumberOfProcesses: 2, path: example.path, module: example.module})
 }
 
-runExamples([example1, example2], createWorker).catch(e => console.error(e))
+runExamples([example1, example2, example3], createWorker).catch(e => console.error(e))
