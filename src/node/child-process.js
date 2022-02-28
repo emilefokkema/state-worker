@@ -22,7 +22,7 @@ class NodeChildProcess{
 			serialization: 'advanced'
 		});
 		process.stdout.on('data', (data) => {
-			console.log(data.toString())
+			console.log(`from child process: ${data}`)
 		});
 		process.on('error', (err) => {
 			console.log('child process error', err)

@@ -1,7 +1,10 @@
 const initializedType = 'initialized';
+const executionCompletedType = 'executionCompleted';
 
 export function start(importer, parentProcess){
     let scriptExport;
+    let withState = {};
+
     async function initialize(msg){
         try{
             scriptExport = await importer.importMethods(msg.config, msg.baseURI);
@@ -25,10 +28,24 @@ export function start(importer, parentProcess){
             parentProcess.sendMessage({type: initializedType, error: e.toString()});
         }
     }
+    async function execute(msg){
+        try{
+            const method = scriptExport.commands[msg.methodName] || scriptExport.queries[msg.methodName];
+            const result = method.apply(withState, msg.args);
+            parentProcess.sendMessage({type: executionCompletedType, result})
+        }catch(e){
+            parentProcess.sendMessage({type: executionCompletedType, error: e.toString()})
+        }
+    }
 
     parentProcess.addMessageEventListener((m) => {
         if(m.type === 'initialize'){
             initialize(m);
+            return;
+        }
+        if(m.type === 'execution'){
+            execute(m);
+            return;
         }
     })
     

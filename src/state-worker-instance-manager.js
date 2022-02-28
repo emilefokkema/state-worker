@@ -1,10 +1,4 @@
-class Execution{
-    constructor(methodName, args, isCommand){
-        this.methodName = methodName;
-        this.args = args;
-        this.isCommand = isCommand;
-    }
-}
+import { Execution } from './execution';
 
 export class StateWorkerInstanceManager{
     constructor(instanceFactory, maxNumberOfProcesses){
@@ -19,6 +13,12 @@ export class StateWorkerInstanceManager{
             instance.terminate();
         }
     }
+    notifyExecutionResultListeners(execution, result, error){
+        const listenersToNotify = this.executionResultListeners.slice();
+        for(let listenerToNotify of listenersToNotify){
+            listenerToNotify(execution, result, error);
+        }
+    }
     removeExecutionResultListener(listener){
         const index = this.executionResultListeners.indexOf(listener);
         if(index === -1){
@@ -26,19 +26,28 @@ export class StateWorkerInstanceManager{
         }
         this.executionResultListeners.splice(index, 1);
     }
-    performExecution(execution, instance){
-        
+    async performExecution(execution, instance){
+        try{
+            const result = await instance.performExecution(execution);
+            this.notifyExecutionResultListeners(execution, result, undefined);
+        }catch(e){
+            this.notifyExecutionResultListeners(execution, undefined, e);
+        }
     }
-    next(){
+    async next(){
         if(this.pendingExecutions.length === 0){
+            console.log('queue is empty')
             return;
         }
         const instanceThatIsNotBusy = this.instances.find(i => !i.busy);
         if(!instanceThatIsNotBusy){
+            console.log('all instances are busy')
             return;
         }
         const execution = this.pendingExecutions.shift();
-        this.performExecution(execution, instanceThatIsNotBusy);
+        console.log(`going to execute '${execution.methodName}'`)
+        await this.performExecution(execution, instanceThatIsNotBusy);
+        this.next();
     }
     getExecutionResult(execution){
         return new Promise((res, rej) => {
@@ -59,6 +68,7 @@ export class StateWorkerInstanceManager{
     executeQuery(methodName, args){
         const execution = new Execution(methodName, args, false);
         const promise = this.getExecutionResult(execution);
+        console.log(`queueing execution of query '${methodName}'`)
         this.pendingExecutions.push(execution);
         this.next();
         return promise;
@@ -66,6 +76,7 @@ export class StateWorkerInstanceManager{
     executeCommand(methodName, args){
         const execution = new Execution(methodName, args, true);
         const promise = this.getExecutionResult(execution);
+        console.log(`queueing execution of command '${methodName}'`)
         this.pendingExecutions.push(execution);
         this.next();
         return promise;

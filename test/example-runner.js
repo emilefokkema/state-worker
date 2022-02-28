@@ -23,7 +23,9 @@ async function executePartOfSequence(part, worker){
 	if(part.query){
 		try{
 			const result = await runWithTimeout(() => worker[part.query].apply(worker, part.args), 2000, `Timeout exceeded`);
-			console.log(`result of query '${part.query}' was`, result)
+			if(result !== part.expectedResult){
+				return {error: `From query '${part.query}', expected ${JSON.stringify(part.expectedResult)}, but got ${JSON.stringify(result)}`}
+			}
 		}catch(e){
 			return {error: `Error when executing query '${part.query}': ${e}`}
 		}
