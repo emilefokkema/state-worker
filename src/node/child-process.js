@@ -1,40 +1,30 @@
-const cp = require('child_process');
+const { Worker } = require('worker_threads');
 
 class NodeChildProcess{
-    constructor(process){
-        this.process = process;
+    constructor(worker){
+        this.worker = worker;
     }
     terminate(){
-        this.process.kill();
+        this.worker.terminate();
     }
     sendMessage(msg){
-        this.process.send(msg);
+        this.worker.postMessage(msg);
     }
     addMessageEventListener(listener){
-        this.process.addListener('message', listener);
+        this.worker.addListener('message', listener);
     }
     removeMessageEventListener(listener){
-        this.process.removeListener('message', listener);
+        this.worker.removeListener('message', listener);
     }
     static create(path){
-        const process = cp.fork(path, [], {
-			stdio: [ 'pipe', 'pipe', 'pipe', 'ipc' ],
-			serialization: 'advanced'
-		});
-		process.stdout.on('data', (data) => {
-			console.log(`from child process: ${data}`)
-		});
-		process.on('error', (err) => {
-			console.log('child process error', err)
-		});
-		process.stderr.on('data', (data) => {
-			console.log('data from stderr')
-			console.log(data.toString())
-		});
-		process.on('exit', (code, signal) => {
-			console.log('child process has exited')
-		});
-        return new NodeChildProcess(process);
+        const worker = new Worker(path);
+        worker.on('error', (e) => {
+            console.log(`error from worker`, e)
+        });
+        worker.on('exit', () => {
+            console.log(`worker has exited`)
+        });
+        return new NodeChildProcess(worker);
     }
 }
 

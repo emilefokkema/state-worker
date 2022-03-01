@@ -10,7 +10,7 @@ module.exports = {
 		globalObject: 'this'
 	},
 	externals: {
-		child_process: 'child_process',
+		worker_threads: 'worker_threads',
 		path: 'path'
 	},
 	node: {

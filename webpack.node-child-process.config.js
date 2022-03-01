@@ -7,7 +7,8 @@ module.exports = {
 		path: path.resolve(__dirname, 'dist')
 	},
 	externals: {
-		'./req': 'commonjs-module ./req'
+		'./req': 'commonjs-module ./req',
+		worker_threads: 'commonjs-module worker_threads',
 	},
 	devtool: false,
 	mode: 'production'

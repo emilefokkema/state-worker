@@ -1,12 +1,14 @@
+const { parentPort } = require('worker_threads');
+
 class NodeParentProcess{
     sendMessage(msg){
-        process.send(msg);
+        parentPort.postMessage(msg);
     }
     addMessageEventListener(listener){
-        process.addListener('message', listener);
+        parentPort.addListener('message', listener);
     }
     removeMessageEventListener(listener){
-        process.removeListener('message', listener);
+        parentPort.removeListener('message', listener);
     }
 }
 
