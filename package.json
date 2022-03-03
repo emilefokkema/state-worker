@@ -4,7 +4,7 @@
   "description": "Share a state between processes, change it an query it",
   "main": "dist/state-worker.js",
   "scripts": {
-    "test-node": "node ./test/test-in-node",
+    "test-node": "npx jasmine",
     "test-web": "karma start",
     "copy-files": "node ./copy-files.js",
     "replace-script": "node ./replace-script.js",
