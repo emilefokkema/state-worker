@@ -17,8 +17,8 @@ export function start(importer, parentProcess){
                 parentProcess.sendMessage({type: initializedType, error: `Exported member 'queries' is not an object`});
                 return;
             }
-            const queryNames = Object.getOwnPropertyNames(queries);
-            const commandNames = Object.getOwnPropertyNames(commands);
+            const queryNames = queries ? Object.getOwnPropertyNames(queries) : [];
+            const commandNames = commands ? Object.getOwnPropertyNames(commands) : [];
             if(queryNames.includes('terminate') || commandNames.includes('terminate')){
                 parentProcess.sendMessage({type: initializedType, error: `'terminate' cannot be used as the name of a command or a query`});
                 return;

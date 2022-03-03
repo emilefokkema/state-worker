@@ -16,7 +16,11 @@ module.exports = function(config) {
     // list of files / patterns to load in the browser
     files: [
       'dist/state-worker.js',
-      'test/web/**/*.js'
+      'test/web/*.spec.js',
+      {
+        pattern: 'test/web/examples/*.js',
+        included: false
+      }
     ],
 
 
