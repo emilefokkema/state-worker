@@ -5,7 +5,7 @@
   "main": "dist/state-worker.js",
   "scripts": {
     "test-node": "node ./test/test-in-node",
-    "test-web": "npm run build-dev && webpack --config ./webpack.web-tests.config.js && node ./test/copy-files-web-test.js && npx http-server ./test/web-test",
+    "test-web": "karma start",
     "copy-files": "node ./copy-files.js",
     "replace-script": "node ./replace-script.js",
     "build:main": "webpack --config ./webpack.config.js",

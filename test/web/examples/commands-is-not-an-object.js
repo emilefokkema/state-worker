@@ -1,0 +1,3 @@
+commands = function(){};
+
+queries = {};
