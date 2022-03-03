@@ -44,6 +44,7 @@ export class StateWorkerInstance {
 		this.process.sendMessage({type: 'initialize', config: this.config, baseURI: this.baseURI});
 		const result = await initializedPromise;
 		if(result.error){
+			this.terminate();
 			throw new Error(result.error);
 		}
 		return result.methodCollection;
