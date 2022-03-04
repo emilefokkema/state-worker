@@ -1,4 +1,2 @@
 node_modules/
 dist/
-test/web-test/state-worker.js
-test/web-test/index.js
