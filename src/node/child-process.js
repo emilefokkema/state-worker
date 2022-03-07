@@ -21,9 +21,6 @@ class NodeChildProcess{
         worker.on('error', (e) => {
             console.log(`error from worker`, e)
         });
-        worker.on('exit', () => {
-            console.log(`worker has exited`)
-        });
         return new NodeChildProcess(worker);
     }
 }

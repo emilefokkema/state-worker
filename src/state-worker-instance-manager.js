@@ -36,16 +36,13 @@ export class StateWorkerInstanceManager{
     }
     async next(){
         if(this.pendingExecutions.length === 0){
-            console.log('queue is empty')
             return;
         }
         const instanceThatIsNotBusy = this.instances.find(i => !i.busy);
         if(!instanceThatIsNotBusy){
-            console.log('all instances are busy')
             return;
         }
         const execution = this.pendingExecutions.shift();
-        console.log(`going to execute '${execution.methodName}'`)
         await this.performExecution(execution, instanceThatIsNotBusy);
         this.next();
     }
@@ -68,7 +65,6 @@ export class StateWorkerInstanceManager{
     executeQuery(methodName, args){
         const execution = new Execution(methodName, args, false);
         const promise = this.getExecutionResult(execution);
-        console.log(`queueing execution of query '${methodName}'`)
         this.pendingExecutions.push(execution);
         this.next();
         return promise;
@@ -76,7 +72,6 @@ export class StateWorkerInstanceManager{
     executeCommand(methodName, args){
         const execution = new Execution(methodName, args, true);
         const promise = this.getExecutionResult(execution);
-        console.log(`queueing execution of command '${methodName}'`)
         this.pendingExecutions.push(execution);
         this.next();
         return promise;
