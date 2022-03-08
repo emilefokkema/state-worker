@@ -24,6 +24,7 @@ export class StateWorkerInstanceManager{
         this.pendingExecutions = [];
         this.executionResultListeners = [];
         this.pendingInstanceCreations = [];
+        this.latestInstanceId = 0;
     }
     terminate(){
         for(let instance of this.instances){
@@ -48,7 +49,7 @@ export class StateWorkerInstanceManager{
             return;
         }
         instanceCreation.start();
-        const instance = this.instanceFactory();
+        const instance = this.instanceFactory(this.latestInstanceId++);
         await instance.initialize(state);
         if(!instanceCreation.canFinish()){
             instance.terminate();
@@ -86,11 +87,6 @@ export class StateWorkerInstanceManager{
         const numberOfNewInstancesToCreate = Math.min(maxNumberOfNewInstances, neededNumberOfNewInstances);
         const numberOfExecutions = Math.min(this.idleInstances.length, this.pendingExecutions.length);
         const instances = this.idleInstances.splice(0, numberOfExecutions);
-        // console.log(`pending executions: ${this.pendingExecutions.length}\n` +
-        // `number of instances: ${this.instances.length}\n` +
-        // `pending instance creations: ${this.pendingInstanceCreations.length}\n` +
-        // `about to use ${numberOfExecutions} instance(s)\n` +
-        // `about to begin creating ${numberOfNewInstancesToCreate} instance(s)`)
         for(let i = 0; i < numberOfNewInstancesToCreate; i++){
             this.pendingInstanceCreations.push(new InstanceCreation());
         }
@@ -131,7 +127,7 @@ export class StateWorkerInstanceManager{
         return promise;
     }
     async initialize(){
-        const instance = this.instanceFactory();
+        const instance = this.instanceFactory(this.latestInstanceId++);
         const methodCollection = await instance.initialize();
         this.idleInstances.push(instance);
         this.instances.push(instance);

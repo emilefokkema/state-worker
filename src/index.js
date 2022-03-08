@@ -21,10 +21,11 @@ class StateWorker{
     static async create(config){
         const childProcessFactory = typeof window === 'undefined' ? new NodeChildProcessFactory() : new WebChildProcessFactory();
         const manager = StateWorkerInstanceManager.create(
-            () => new StateWorkerInstance(
+            (id) => new StateWorkerInstance(
                 () => childProcessFactory.createChildProcess(config),
                 config,
-                childProcessFactory.baseURI),
+                childProcessFactory.baseURI,
+                id),
             config);
         const {queries, commands} = await manager.initialize();
         return new StateWorker(manager, queries, commands);

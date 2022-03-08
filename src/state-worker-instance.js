@@ -1,9 +1,10 @@
 export class StateWorkerInstance {
-	constructor(processFactory, config, baseURI){
+	constructor(processFactory, config, baseURI, id){
 		this.baseURI = baseURI;
 		this.processFactory = processFactory;
 		this.config = config;
 		this.process = undefined;
+		this.id = id;
 	}
 	terminate(){
 		if(this.process){

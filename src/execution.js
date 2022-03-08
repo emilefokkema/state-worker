@@ -4,4 +4,7 @@ export class Execution{
         this.args = args;
         this.isCommand = isCommand;
     }
+    toString(){
+        return `${this.methodName}(${this.args.map(a => JSON.stringify(a)).join(', ')})`
+    }
 }
