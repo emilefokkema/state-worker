@@ -1,5 +1,20 @@
 import { Execution } from './execution';
 
+class InstanceCreation{
+    constructor(){
+        this.started = false;
+        this.cancelled = false;
+    }
+    canStart(){
+        return !this.started && !this.cancelled;
+    }
+    canFinish(){
+        return !this.cancelled;
+    }
+    start(){
+        this.started = true;
+    }
+}
 export class StateWorkerInstanceManager{
     constructor(instanceFactory, maxNumberOfProcesses){
         this.instanceFactory = instanceFactory;
@@ -8,6 +23,7 @@ export class StateWorkerInstanceManager{
         this.idleInstances = [];
         this.pendingExecutions = [];
         this.executionResultListeners = [];
+        this.pendingInstanceCreations = [];
     }
     terminate(){
         for(let instance of this.instances){
@@ -27,23 +43,62 @@ export class StateWorkerInstanceManager{
         }
         this.executionResultListeners.splice(index, 1);
     }
-    async performExecution(execution, instance){
-        try{
-            const result = await instance.performExecution(execution);
-            this.notifyExecutionResultListeners(execution, result, undefined);
-        }catch(e){
-            this.notifyExecutionResultListeners(execution, undefined, e);
-        }
-    }
-    async next(){
-        if(this.pendingExecutions.length === 0 || this.idleInstances.length === 0){
+    async performNewInstanceCreation(instanceCreation, state){
+        if(!instanceCreation.canStart()){
             return;
         }
-        const [instance] = this.idleInstances.splice(0, 1);
-        const execution = this.pendingExecutions.shift();
-        await this.performExecution(execution, instance);
+        instanceCreation.start();
+        const instance = this.instanceFactory();
+        await instance.initialize(state);
+        if(!instanceCreation.canFinish()){
+            instance.terminate();
+            return;
+        }
+        const index = this.pendingInstanceCreations.indexOf(instanceCreation);
+        this.pendingInstanceCreations.splice(index, 1);
+        this.idleInstances.push(instance);
+        this.instances.push(instance);
+    }
+    async createNewInstancesUsingInstance(instance){
+        const pendingInstanceCreationsThatCanStart = this.pendingInstanceCreations.filter(c => c.canStart());
+        if(pendingInstanceCreationsThatCanStart.length > 0){
+            const state = await instance.getState();
+            await Promise.all(pendingInstanceCreationsThatCanStart.map(c => this.performNewInstanceCreation(c, state)));
+        }
+    }
+    async performExecution(execution, instance){
+        const result = await instance.performExecution(execution);
+        if(result.error){
+            this.notifyExecutionResultListeners(execution, undefined, result.error);
+        }else{
+            this.notifyExecutionResultListeners(execution, result.result, undefined);
+        }
+        await this.createNewInstancesUsingInstance(instance);
         this.idleInstances.push(instance);
         this.next();
+    }
+    async next(){
+        if(this.pendingExecutions.length === 0){
+            return;
+        }
+        const maxNumberOfNewInstances = this.maxNumberOfProcesses - this.instances.length - this.pendingInstanceCreations.length;
+        const neededNumberOfNewInstances = Math.max(0, this.pendingExecutions.length - this.idleInstances.length);
+        const numberOfNewInstancesToCreate = Math.min(maxNumberOfNewInstances, neededNumberOfNewInstances);
+        const numberOfExecutions = Math.min(this.idleInstances.length, this.pendingExecutions.length);
+        const instances = this.idleInstances.splice(0, numberOfExecutions);
+        // console.log(`pending executions: ${this.pendingExecutions.length}\n` +
+        // `number of instances: ${this.instances.length}\n` +
+        // `pending instance creations: ${this.pendingInstanceCreations.length}\n` +
+        // `about to use ${numberOfExecutions} instance(s)\n` +
+        // `about to begin creating ${numberOfNewInstancesToCreate} instance(s)`)
+        for(let i = 0; i < numberOfNewInstancesToCreate; i++){
+            this.pendingInstanceCreations.push(new InstanceCreation());
+        }
+        for(let i = 0; i < numberOfExecutions; i++){
+            const execution = this.pendingExecutions.shift();
+            const instance = instances[i];
+            this.performExecution(execution, instance);
+        }
     }
     getExecutionResult(execution){
         return new Promise((res, rej) => {

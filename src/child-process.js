@@ -23,12 +23,13 @@ export function start(importer, parentProcess){
                 parentProcess.sendMessage({type: initializedType, error: `'terminate' cannot be used as the name of a command or a query`});
                 return;
             }
+            withState.state = msg.state;
             parentProcess.sendMessage({type: initializedType, methodCollection: {queries: queryNames, commands: commandNames}})
         }catch(e){
             parentProcess.sendMessage({type: initializedType, error: e.toString()});
         }
     }
-    async function execute(msg){
+    function execute(msg){
         try{
             const method = scriptExport.commands[msg.methodName] || scriptExport.queries[msg.methodName];
             const result = method.apply(withState, msg.args);
@@ -36,6 +37,10 @@ export function start(importer, parentProcess){
         }catch(e){
             parentProcess.sendMessage({type: executionCompletedType, error: e.toString()})
         }
+    }
+    function sendState(){
+        const { state } = withState;
+        parentProcess.sendMessage({type: 'state', state});
     }
 
     parentProcess.addMessageEventListener((m) => {
@@ -45,6 +50,10 @@ export function start(importer, parentProcess){
         }
         if(m.type === 'execution'){
             execute(m);
+            return;
+        }
+        if(m.type === 'requestState'){
+            sendState();
             return;
         }
     })

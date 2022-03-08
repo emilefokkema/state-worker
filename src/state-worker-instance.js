@@ -25,20 +25,22 @@ export class StateWorkerInstance {
 	createProcess(){
 		this.process = this.processFactory();
 	}
-	async performExecution(execution){
+	async getState(){
+		const resultPromise = this.whenReceivedMessageOfType('state');
+		this.process.sendMessage({type: 'requestState'});
+		const result = await resultPromise;
+		return result.state;
+	}
+	performExecution(execution){
 		const resultPromise = this.whenReceivedMessageOfType('executionCompleted');
 		this.process.sendMessage({type: 'execution', methodName: execution.methodName, args: execution.args});
-		const result = await resultPromise;
-		if(result.error){
-			throw new Error(result.error);
-		}
-		return result.result;
+		return resultPromise;
 	}
-	async initialize(){
+	async initialize(state){
 		this.createProcess();
 		await this.whenReceivedMessageOfType('started');
 		const initializedPromise = this.whenReceivedMessageOfType('initialized');
-		this.process.sendMessage({type: 'initialize', config: this.config, baseURI: this.baseURI});
+		this.process.sendMessage({type: 'initialize', config: this.config, baseURI: this.baseURI, state});
 		const result = await initializedPromise;
 		if(result.error){
 			this.terminate();
