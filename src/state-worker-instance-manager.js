@@ -5,6 +5,7 @@ export class StateWorkerInstanceManager{
         this.instanceFactory = instanceFactory;
         this.maxNumberOfProcesses = maxNumberOfProcesses;
         this.instances = [];
+        this.idleInstances = [];
         this.pendingExecutions = [];
         this.executionResultListeners = [];
     }
@@ -35,15 +36,13 @@ export class StateWorkerInstanceManager{
         }
     }
     async next(){
-        if(this.pendingExecutions.length === 0){
+        if(this.pendingExecutions.length === 0 || this.idleInstances.length === 0){
             return;
         }
-        const instanceThatIsNotBusy = this.instances.find(i => !i.busy);
-        if(!instanceThatIsNotBusy){
-            return;
-        }
+        const [instance] = this.idleInstances.splice(0, 1);
         const execution = this.pendingExecutions.shift();
-        await this.performExecution(execution, instanceThatIsNotBusy);
+        await this.performExecution(execution, instance);
+        this.idleInstances.push(instance);
         this.next();
     }
     getExecutionResult(execution){
@@ -79,6 +78,7 @@ export class StateWorkerInstanceManager{
     async initialize(){
         const instance = this.instanceFactory();
         const methodCollection = await instance.initialize();
+        this.idleInstances.push(instance);
         this.instances.push(instance);
         return methodCollection;
     }

@@ -4,7 +4,6 @@ export class StateWorkerInstance {
 		this.processFactory = processFactory;
 		this.config = config;
 		this.process = undefined;
-		this.busy = false;
 	}
 	terminate(){
 		if(this.process){
@@ -27,11 +26,9 @@ export class StateWorkerInstance {
 		this.process = this.processFactory();
 	}
 	async performExecution(execution){
-		this.busy = true;
 		const resultPromise = this.whenReceivedMessageOfType('executionCompleted');
 		this.process.sendMessage({type: 'execution', methodName: execution.methodName, args: execution.args});
 		const result = await resultPromise;
-		this.busy = false;
 		if(result.error){
 			throw new Error(result.error);
 		}
