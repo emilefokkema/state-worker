@@ -1,5 +1,6 @@
 import { Execution } from './execution';
 import { InstanceCreation } from './instance-creation';
+import { Event } from './event';
 
 export class StateWorkerInstanceManager{
     constructor(instanceFactory, maxNumberOfProcesses){
@@ -8,7 +9,7 @@ export class StateWorkerInstanceManager{
         this.instances = [];
         this.idleInstances = [];
         this.pendingExecutions = [];
-        this.executionResultListeners = [];
+        this.executionResult = new Event();
         this.pendingInstanceCreations = [];
         this.latestInstanceId = 0;
     }
@@ -16,19 +17,6 @@ export class StateWorkerInstanceManager{
         for(let instance of this.instances){
             instance.terminate();
         }
-    }
-    notifyExecutionResultListeners(execution, result, error){
-        const listenersToNotify = this.executionResultListeners.slice();
-        for(let listenerToNotify of listenersToNotify){
-            listenerToNotify(execution, result, error);
-        }
-    }
-    removeExecutionResultListener(listener){
-        const index = this.executionResultListeners.indexOf(listener);
-        if(index === -1){
-            return;
-        }
-        this.executionResultListeners.splice(index, 1);
     }
     async performNewInstanceCreation(instanceCreation, state){
         if(!instanceCreation.canStart()){
@@ -56,9 +44,9 @@ export class StateWorkerInstanceManager{
     async performExecution(execution, instance){
         const result = await instance.performExecution(execution);
         if(result.error){
-            this.notifyExecutionResultListeners(execution, undefined, result.error);
+            this.executionResult.dispatch(execution, undefined, result.error);
         }else{
-            this.notifyExecutionResultListeners(execution, result.result, undefined);
+            this.executionResult.dispatch(execution, result.result, undefined);
         }
         await this.createNewInstancesUsingInstance(instance);
         this.idleInstances.push(instance);
@@ -82,21 +70,12 @@ export class StateWorkerInstanceManager{
             this.performExecution(execution, instance);
         }
     }
-    getExecutionResult(execution){
-        return new Promise((res, rej) => {
-            const listener = (_execution, result, error) => {
-                if(_execution !== execution){
-                    return;
-                }
-                this.removeExecutionResultListener(listener);
-                if(error){
-                    rej(error);
-                    return;
-                }
-                res(result);
-            };
-            this.executionResultListeners.push(listener);
-        });
+    async getExecutionResult(execution){
+        const [_, result, error] = await this.executionResult.getNext((_execution) => _execution === execution);
+        if(error){
+            throw error;
+        }
+        return result;
     }
     executeQuery(methodName, args){
         const execution = new Execution(methodName, args, false);
