@@ -73,7 +73,7 @@ export class StateWorkerInstanceManager{
     async getExecutionResult(execution){
         const [_, result, error] = await this.executionResult.getNext((_execution) => _execution === execution);
         if(error){
-            throw error;
+            throw new Error(error);
         }
         return result;
     }

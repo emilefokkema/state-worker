@@ -13,8 +13,8 @@ describe('a state worker', () => {
     });
 
     it('should throw when query throws', async () => {
-        await expectAsync((async () => {
+        await expect((async () => {
             const result = await worker.getSomething();
-        })()).toBeRejectedWith('Error: failed to get something');
+        })()).rejects.toThrow('Error: failed to get something');
     });
 });

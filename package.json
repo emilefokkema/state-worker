@@ -4,7 +4,7 @@
   "description": "Share a state between processes, change it an query it",
   "main": "dist/state-worker.js",
   "scripts": {
-    "test-node": "jasmine",
+    "test-node": "jest --config jest-node.config.js",
     "test-web": "karma start",
     "copy-files": "node ./copy-files.js",
     "replace-script": "node ./replace-script.js",
@@ -26,6 +26,7 @@
     "http-server": "^14.1.0",
     "jasmine": "^4.0.2",
     "jasmine-core": "^4.0.1",
+    "jest": "^27.5.1",
     "karma": "^6.3.17",
     "karma-chrome-launcher": "^3.1.0",
     "karma-jasmine": "^4.0.1",

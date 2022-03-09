@@ -12,6 +12,6 @@ describe('a state worker', () => {
     it('should throw when query throws', async () => {
         await expectAsync((async () => {
             const result = await worker.getSomething();
-        })()).toBeRejectedWith('Error: failed to get something');
+        })()).toBeRejectedWithError('Error: failed to get something');
     });
 });
