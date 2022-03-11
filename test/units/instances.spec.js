@@ -71,6 +71,30 @@ describe('when we create a state worker', () => {
             it('the first instance should have been asked for its state and the first request should have resolved', () => {
                 expect(actualRequest1Response).toEqual(expectedRequest1Response)
             });
+
+            describe('and then the first instance returns its state', () => {
+                const state = 42;
+                let secondExecutionRequest;
+                let secondExecutionRequestId;
+
+                beforeAll(async () => {
+                    const secondExecutionRequestPromise = getNext(firstChildProcess.executionRequest);
+                    firstChildProcess.stateResponse.dispatch(state);
+                    [secondExecutionRequest, secondExecutionRequestId] = await secondExecutionRequestPromise;
+                });
+
+                it('should have asked the first instance to execute the second request', () => {
+                    expect(secondExecutionRequest).toEqual({
+                        methodName: queryMethodName,
+                        args: [request2Argument],
+                        isCommand: false
+                    })
+                });
+
+                it('should have created two new instances', () => {
+                    expect(childProcessFactory.childProcesses.length).toBe(3);
+                });
+            });
         });
     });
 });

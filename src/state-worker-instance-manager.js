@@ -18,6 +18,9 @@ export class StateWorkerInstanceManager{
         for(let instance of this.instances){
             instance.terminate();
         }
+        for(let pendingInstanceCreation of this.pendingInstanceCreations){
+            pendingInstanceCreation.cancel();
+        }
     }
     async performNewInstanceCreation(instanceCreation, state){
         if(!instanceCreation.canStart()){
@@ -39,7 +42,7 @@ export class StateWorkerInstanceManager{
         const pendingInstanceCreationsThatCanStart = this.pendingInstanceCreations.filter(c => c.canStart());
         if(pendingInstanceCreationsThatCanStart.length > 0){
             const state = await instance.getState();
-            await Promise.all(pendingInstanceCreationsThatCanStart.map(c => this.performNewInstanceCreation(c, state)));
+            pendingInstanceCreationsThatCanStart.map(c => this.performNewInstanceCreation(c, state));
         }
     }
     async performExecution(execution, instance){
