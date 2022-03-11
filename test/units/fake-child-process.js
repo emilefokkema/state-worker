@@ -1,21 +1,35 @@
-import { Event } from '../../src/event';
+import { Event } from '../../src/events/event';
+import { getNext } from '../../src/events/get-next';
+import { filter }from '../../src/events/filter';
 
 export class FakeChildProcess{
     constructor(){
-        this.messageSent = new Event();
-        this.messageReceived = new Event();
+        this.started = new Event();
+        this.initializationResponse = new Event();
+        this.initializationRequest = new Event();
+        this.latestExecutionRequestId = 0;
+        this.executionRequest = new Event();
+        this.stateRequest = new Event();
+        this.executionResponse = new Event();
+        this.stateResponse = new Event();
     }
-    sendMessageFromChildProcess(msg){
-        this.messageSent.dispatch(msg);
+    async getState(){
+        this.stateRequest.dispatch();
+        const [result] = await getNext(this.stateResponse);
+        return result;
     }
-    addMessageEventListener(listener){
-        this.messageSent.addListener(listener);
+    async performExecution(execution){
+        const executionRequestId = this.latestExecutionRequestId++;
+        this.executionRequest.dispatch(execution, executionRequestId);
+        const [_, result] = await getNext(filter(this.executionResponse, (_executionRequestId) => _executionRequestId === executionRequestId));
+        return result;
     }
-    removeMessageEventListener(listener){
-        this.messageSent.removeListener(listener);
+    whenStarted(){
+        return getNext(this.started);
     }
-    sendMessage(msg){
-        this.messageReceived.dispatch(msg);
+    async initialize(config, baseURI, state){
+        this.initializationRequest.dispatch({config, baseURI, state});
+        const [result] = await getNext(this.initializationResponse);
+        return result;
     }
-    terminate(){}
 }

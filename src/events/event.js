@@ -18,16 +18,4 @@ export class Event{
             listenerToNotify(...args);
         }
     }
-    getNext(predicate){
-        return new Promise((res) => {
-            const listener = (...args) => {
-                if(predicate && !predicate(...args)){
-                    return;
-                }
-                this.removeListener(listener);
-                res(args);
-            };
-            this.addListener(listener);
-        });
-    }
 }

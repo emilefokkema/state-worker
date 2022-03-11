@@ -1,64 +1,51 @@
-const initializedType = 'initialized';
-const executionCompletedType = 'executionCompleted';
+import { wrapParentProcess } from './parent-process-wrapper';
 
 export function start(importer, parentProcess){
+    const wrappedParentProcess = wrapParentProcess(parentProcess);
     let commands;
     let queries;
     let withState = {};
 
-    async function initialize(msg){
+    wrappedParentProcess.onInitializationRequested.addListener(async ({config, baseURI, state}, sendResponse) => {
         try{
-            ({ commands, queries } = await importer.importMethods(msg.config, msg.baseURI));
+            ({ commands, queries } = await importer.importMethods(config, baseURI));
             commands = commands || {};
             queries = queries || {};
             if(typeof commands !== 'object'){
-                parentProcess.sendMessage({type: initializedType, error: `Exported member 'commands' is not an object`});
+                sendResponse({error: `Exported member 'commands' is not an object`})
                 return;
             }
             if(typeof queries !== 'object'){
-                parentProcess.sendMessage({type: initializedType, error: `Exported member 'queries' is not an object`});
+                sendResponse({error: `Exported member 'queries' is not an object`})
                 return;
             }
             const queryNames = Object.getOwnPropertyNames(queries);
             const commandNames = Object.getOwnPropertyNames(commands);
             if(queryNames.includes('terminate') || commandNames.includes('terminate')){
-                parentProcess.sendMessage({type: initializedType, error: `'terminate' cannot be used as the name of a command or a query`});
+                sendResponse({error: `'terminate' cannot be used as the name of a command or a query`})
                 return;
             }
-            withState.state = msg.state;
-            parentProcess.sendMessage({type: initializedType, methodCollection: {queries: queryNames, commands: commandNames}})
+            withState.state = state;
+            sendResponse({methodCollection: {queries: queryNames, commands: commandNames}})
         }catch(e){
-            parentProcess.sendMessage({type: initializedType, error: e.toString()});
+            sendResponse({error: e.toString()})
         }
-    }
-    function execute(msg){
-        try{
-            const method = commands[msg.methodName] || queries[msg.methodName];
-            const result = method.apply(withState, msg.args);
-            parentProcess.sendMessage({type: executionCompletedType, result})
-        }catch(e){
-            parentProcess.sendMessage({type: executionCompletedType, error: e.toString()})
-        }
-    }
-    function sendState(){
-        const { state } = withState;
-        parentProcess.sendMessage({type: 'state', state});
-    }
+    });
 
-    parentProcess.addMessageEventListener((m) => {
-        if(m.type === 'initialize'){
-            initialize(m);
-            return;
+    wrappedParentProcess.onExecutionRequested.addListener(({methodName, args}, sendResponse) => {
+        try{
+            const method = commands[methodName] || queries[methodName];
+            const result = method.apply(withState, args);
+            sendResponse({result})
+        }catch(e){
+            sendResponse({error: e.toString()})
         }
-        if(m.type === 'execution'){
-            execute(m);
-            return;
-        }
-        if(m.type === 'requestState'){
-            sendState();
-            return;
-        }
-    })
-    
-    parentProcess.sendMessage({type: 'started'});
+    });
+
+    wrappedParentProcess.onStateRequested.addListener((_, sendResponse) => {
+        const { state } = withState;
+        sendResponse(state);
+    });
+
+    wrappedParentProcess.notifyStarted();
 }

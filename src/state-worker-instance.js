@@ -12,37 +12,19 @@ export class StateWorkerInstance {
 			this.process = undefined;
 		}
 	}
-	whenReceivedMessageOfType(type){
-		return new Promise((res) => {
-			const listener = (msg) => {
-				if(msg.type === type){
-					this.process.removeMessageEventListener(listener);
-					res(msg);
-				}
-			};
-			this.process.addMessageEventListener(listener);
-		});
-	}
 	createProcess(){
 		this.process = this.processFactory();
 	}
-	async getState(){
-		const resultPromise = this.whenReceivedMessageOfType('state');
-		this.process.sendMessage({type: 'requestState'});
-		const result = await resultPromise;
-		return result.state;
+	getState(){
+		return this.process.getState();
 	}
 	performExecution(execution){
-		const resultPromise = this.whenReceivedMessageOfType('executionCompleted');
-		this.process.sendMessage({type: 'execution', methodName: execution.methodName, args: execution.args});
-		return resultPromise;
+		return this.process.performExecution(execution);
 	}
 	async initialize(state){
 		this.createProcess();
-		await this.whenReceivedMessageOfType('started');
-		const initializedPromise = this.whenReceivedMessageOfType('initialized');
-		this.process.sendMessage({type: 'initialize', config: this.config, baseURI: this.baseURI, state});
-		const result = await initializedPromise;
+		await this.process.whenStarted();
+		const result = await this.process.initialize(this.config, this.baseURI, state);
 		if(result.error){
 			this.terminate();
 			throw new Error(result.error);
