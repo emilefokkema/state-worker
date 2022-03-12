@@ -1,6 +1,4 @@
-import { createStateWorkerFactory } from '../../src/state-worker-factory-factory';
-import { FakeChildProcessFactory } from './fake-child-process-factory';
-import { getNext } from '../../src/events/get-next';
+import { StateWorkerLifeCycle } from './state-worker-life-cycle';
 
 describe('when creation of a state worker is requested', () => {
     const queryMethodName = 'getNumber';
@@ -9,57 +7,47 @@ describe('when creation of a state worker is requested', () => {
     const config = {
         maxNumberOfProcesses: 3
     };
-    let stateWorkerCreationPromise;
-    let childProcessFactory;
+    let firstChildProcess;
+    let lifeCycle;
 
-    beforeAll(() => {
-        childProcessFactory = new FakeChildProcessFactory(baseUri);
-        stateWorkerCreationPromise = (createStateWorkerFactory(() => childProcessFactory, p => p))(config);
+    beforeAll(async () => {
+        lifeCycle = new StateWorkerLifeCycle(baseUri);
+        firstChildProcess = await lifeCycle.start(config);
     });
 
-    describe('and we look for a created child process', () => {
-        let firstChildProcess;
+    it('a child process should have been created', () => {
+        expect(firstChildProcess).toBeTruthy();
+    });
 
-        beforeAll(() => {
-            firstChildProcess = childProcessFactory.childProcesses[0];
+    it('it should be the only one', () => {
+        expect(lifeCycle.getNumberOfChildProcesses()).toBe(1);
+    });
+
+    describe('and then the child process sends a message saying that it has started', () => {
+        let initializationRequest;
+
+        beforeAll(async () => {
+            initializationRequest = await firstChildProcess.notifyStarted();
         });
 
-        it('it should be there', () => {
-            expect(firstChildProcess).toBeTruthy();
+        it('it should have received an initialization message', () => {
+            const content = initializationRequest.content;
+            expect(content).toBeTruthy();
+            expect(content.baseURI).toEqual(baseUri);
+            expect(content.config).toEqual(config);
         });
 
-        it('it should be the only one', () => {
-            expect(childProcessFactory.childProcesses.length).toBe(1);
-        });
-
-        describe('and then the child process sends a message saying that it has started', () => {
-            let initializationRequest;
+        describe('and then the child process completes initialization', () => {
+            let stateWorker;
 
             beforeAll(async () => {
-                const initialzationRequestPromise = getNext(firstChildProcess.initializationRequest);
-                firstChildProcess.started.dispatch();
-                [initializationRequest] = await initialzationRequestPromise;
+                stateWorker = await lifeCycle.finishCreation({methodCollection: {queries: [queryMethodName], commands: [commandMethodName]}});
             });
 
-            it('it should have received an initialization message', () => {
-                expect(initializationRequest).toBeTruthy();
-                expect(initializationRequest.baseURI).toEqual(baseUri);
-                expect(initializationRequest.config).toEqual(config);
-            });
-
-            describe('and then the child process completes initialization', () => {
-                let stateWorker;
-
-                beforeAll(async () => {
-                    firstChildProcess.initializationResponse.dispatch({methodCollection: {queries: [queryMethodName], commands: [commandMethodName]}});
-                    stateWorker = await stateWorkerCreationPromise;
-                });
-
-                it('the state worker should have been created', () => {
-                    expect(stateWorker).toBeTruthy();
-                    expect(stateWorker[queryMethodName]).toBeInstanceOf(Function);
-                    expect(stateWorker[commandMethodName]).toBeInstanceOf(Function);
-                });
+            it('the state worker should have been created', () => {
+                expect(stateWorker).toBeTruthy();
+                expect(stateWorker[queryMethodName]).toBeInstanceOf(Function);
+                expect(stateWorker[commandMethodName]).toBeInstanceOf(Function);
             });
         });
     });
