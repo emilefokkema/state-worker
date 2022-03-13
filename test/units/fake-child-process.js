@@ -20,7 +20,10 @@ export class FakeChildProcess{
     }
     async performExecution(execution){
         const executionRequestId = this.latestExecutionRequestId++;
-        this.executionRequest.dispatch(execution, executionRequestId);
+        this.executionRequest.dispatch({
+            content: execution,
+            respond: (result) => this.executionResponse.dispatch(executionRequestId, result)
+        });
         const [_, result] = await getNext(filter(this.executionResponse, (_executionRequestId) => _executionRequestId === executionRequestId));
         return result;
     }

@@ -7,16 +7,15 @@ describe('when creation of a state worker is requested', () => {
     const config = {
         maxNumberOfProcesses: 3
     };
-    let firstChildProcess;
     let lifeCycle;
 
     beforeAll(async () => {
-        lifeCycle = new StateWorkerLifeCycle(baseUri);
-        firstChildProcess = await lifeCycle.start(config);
+        lifeCycle = new StateWorkerLifeCycle(baseUri, config);
+        await lifeCycle.start();
     });
 
     it('a child process should have been created', () => {
-        expect(firstChildProcess).toBeTruthy();
+        expect(lifeCycle.firstChildProcess).toBeTruthy();
     });
 
     it('it should be the only one', () => {
@@ -24,29 +23,26 @@ describe('when creation of a state worker is requested', () => {
     });
 
     describe('and then the child process sends a message saying that it has started', () => {
-        let initializationRequest;
 
         beforeAll(async () => {
-            initializationRequest = await firstChildProcess.notifyStarted();
+            await lifeCycle.notifyFirstChildProcessStarted();
         });
 
         it('it should have received an initialization message', () => {
-            const content = initializationRequest.content;
+            const content = lifeCycle.firstInitializationRequest.content;
             expect(content).toBeTruthy();
             expect(content.baseURI).toEqual(baseUri);
             expect(content.config).toEqual(config);
         });
 
         describe('and then the child process completes initialization', () => {
-            let stateWorker;
 
             beforeAll(async () => {
-                stateWorker = await lifeCycle.finishCreation(
-                    initializationRequest,
-                    {methodCollection: {queries: [queryMethodName], commands: [commandMethodName]}});
+                await lifeCycle.finishCreation({methodCollection: {queries: [queryMethodName], commands: [commandMethodName]}});
             });
 
             it('the state worker should have been created', () => {
+                const stateWorker = lifeCycle.stateWorker;
                 expect(stateWorker).toBeTruthy();
                 expect(stateWorker[queryMethodName]).toBeInstanceOf(Function);
                 expect(stateWorker[commandMethodName]).toBeInstanceOf(Function);
