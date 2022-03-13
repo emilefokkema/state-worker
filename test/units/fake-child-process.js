@@ -1,33 +1,28 @@
 import { Event } from '../../src/events/event';
 import { getNext } from '../../src/events/get-next';
-import { filter }from '../../src/events/filter';
+import { RequestAndResponse } from './request-and-response';
 
 export class FakeChildProcess{
     constructor(){
         this.started = new Event();
-        this.initializationResponse = new Event();
-        this.initializationRequest = new Event();
-        this.latestExecutionRequestId = 0;
-        this.executionRequest = new Event();
-        this.stateRequest = new Event();
-        this.executionResponse = new Event();
-        this.stateResponse = new Event();
+        this.initialization = new RequestAndResponse();
+        this.state = new RequestAndResponse();
+        this.execution = new RequestAndResponse();
     }
-    async getState(){
-        this.stateRequest.dispatch({
-            respond: (state) => this.stateResponse.dispatch(state)
-        });
-        const [result] = await getNext(this.stateResponse);
-        return result;
+    get initializationRequest(){
+        return this.initialization.request;
     }
-    async performExecution(execution){
-        const executionRequestId = this.latestExecutionRequestId++;
-        this.executionRequest.dispatch({
-            content: execution,
-            respond: (result) => this.executionResponse.dispatch(executionRequestId, result)
-        });
-        const [_, result] = await getNext(filter(this.executionResponse, (_executionRequestId) => _executionRequestId === executionRequestId));
-        return result;
+    get stateRequest(){
+        return this.state.request;
+    }
+    get executionRequest(){
+        return this.execution.request;
+    }
+    getState(){
+        return this.state.getResponse();
+    }
+    performExecution(execution){
+        return this.execution.getResponse(execution);
     }
     async notifyStarted(){
         const initializationRequestPromise = getNext(this.initializationRequest);
@@ -38,12 +33,7 @@ export class FakeChildProcess{
     whenStarted(){
         return getNext(this.started);
     }
-    async initialize(config, baseURI, state){
-        this.initializationRequest.dispatch({
-            content: {config, baseURI, state},
-            respond: (intializationResult) => this.initializationResponse.dispatch(intializationResult)
-        });
-        const [result] = await getNext(this.initializationResponse);
-        return result;
+    initialize(config, baseURI, state){
+        return this.initialization.getResponse({config, baseURI, state});
     }
 }
