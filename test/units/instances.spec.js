@@ -1,24 +1,21 @@
-import { createStateWorkerFactory } from '../../src/state-worker-factory-factory';
-import { FakeChildProcessFactory } from './fake-child-process-factory';
 import { getNext } from '../../src/events/get-next';
+import { StateWorkerLifeCycle } from './state-worker-life-cycle';
 
 describe('when we create a state worker', () => {
     const queryMethodName = 'getThings';
     let stateWorker;
-    let childProcessFactory;
     let firstChildProcess;
+    let lifeCycle;
 
     beforeAll(async () => {
-        childProcessFactory = new FakeChildProcessFactory('http://base.uri');
-        const creationPromise = (createStateWorkerFactory(() => childProcessFactory, p => p))({
+        lifeCycle = new StateWorkerLifeCycle('http://base.uri');
+        firstChildProcess = await lifeCycle.start({
             maxNumberOfProcesses: 3
         });
-        firstChildProcess = childProcessFactory.childProcesses[0];
-        const initialzationRequestPromise = getNext(firstChildProcess.initializationRequest);
-        firstChildProcess.started.dispatch();
-        await initialzationRequestPromise;
-        firstChildProcess.initializationResponse.dispatch({methodCollection: {queries: [queryMethodName], commands: []}});
-        stateWorker = await creationPromise;
+        const initializationRequest = await firstChildProcess.notifyStarted();
+        stateWorker = await lifeCycle.finishCreation(
+            initializationRequest,
+            {methodCollection: {queries: [queryMethodName], commands: []}})
     });
 
     it('should be there', () => {
@@ -65,7 +62,7 @@ describe('when we create a state worker', () => {
             });
 
             it('no further instances should have been created yet', () => {
-                expect(childProcessFactory.childProcesses.length).toBe(1);
+                expect(lifeCycle.getNumberOfChildProcesses()).toBe(1);
             });
 
             it('the first instance should have been asked for its state and the first request should have resolved', () => {
@@ -92,7 +89,7 @@ describe('when we create a state worker', () => {
                 });
 
                 it('should have created two new instances', () => {
-                    expect(childProcessFactory.childProcesses.length).toBe(3);
+                    expect(lifeCycle.getNumberOfChildProcesses()).toBe(3);
                 });
             });
         });

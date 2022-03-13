@@ -41,7 +41,9 @@ describe('when creation of a state worker is requested', () => {
             let stateWorker;
 
             beforeAll(async () => {
-                stateWorker = await lifeCycle.finishCreation({methodCollection: {queries: [queryMethodName], commands: [commandMethodName]}});
+                stateWorker = await lifeCycle.finishCreation(
+                    initializationRequest,
+                    {methodCollection: {queries: [queryMethodName], commands: [commandMethodName]}});
             });
 
             it('the state worker should have been created', () => {
