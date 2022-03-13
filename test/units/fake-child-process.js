@@ -14,7 +14,9 @@ export class FakeChildProcess{
         this.stateResponse = new Event();
     }
     async getState(){
-        this.stateRequest.dispatch();
+        this.stateRequest.dispatch({
+            respond: (state) => this.stateResponse.dispatch(state)
+        });
         const [result] = await getNext(this.stateResponse);
         return result;
     }

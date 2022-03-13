@@ -17,29 +17,23 @@ describe('when we create a state worker', () => {
     });
 
     describe('and then we make four requests (one more than the max number of processes)', () => {
-        const request1Argument = 1;
-        let request1Promise;
-        const request2Argument = 2;
-        let request2Promise;
-        const request3Argument = 3;
-        let request3Promise;
-        const request4Argument = 4;
-        let request4Promise;
+        let request1, request2, request3, request4;
         let firstExecutionRequest;
 
         beforeAll(async () => {
-            const firstExecutionRequestPromise = getNext(lifeCycle.firstChildProcess.executionRequest);
-            request1Promise = lifeCycle.stateWorker[queryMethodName](request1Argument);
-            request2Promise = lifeCycle.stateWorker[queryMethodName](request2Argument);
-            request3Promise = lifeCycle.stateWorker[queryMethodName](request3Argument);
-            request4Promise = lifeCycle.stateWorker[queryMethodName](request4Argument);
-            [firstExecutionRequest] = await firstExecutionRequestPromise;
+            const firstExecutionRequestPromise = getNext(lifeCycle.executionRequested);
+            request1 = lifeCycle.addRequest(queryMethodName, [1]);
+            request2 = lifeCycle.addRequest(queryMethodName, [2]);
+            request3 = lifeCycle.addRequest(queryMethodName, [3]);
+            request4 = lifeCycle.addRequest(queryMethodName, [4]);
+            const [_, executionRequest] = await firstExecutionRequestPromise;
+            firstExecutionRequest = executionRequest;
         });
 
-        it('should have asked the first instance to execute the first request', () => {
+        it('should have asked to execute the first request', () => {
             expect(firstExecutionRequest.content).toEqual({
                 methodName: queryMethodName,
-                args: [request1Argument],
+                args: request1.args,
                 isCommand: false
             })
         });
@@ -47,11 +41,14 @@ describe('when we create a state worker', () => {
         describe('and then the first instance responds to the first request', () => {
             const expectedRequest1Response = 'a';
             let actualRequest1Response;
+            let stateRequest;
 
             beforeAll(async () => {
-                const stateRequestPromise = getNext(lifeCycle.firstChildProcess.stateRequest);
+                const stateRequestPromise = getNext(lifeCycle.stateRequested);
                 firstExecutionRequest.respond({result: expectedRequest1Response});
-                [actualRequest1Response] = await Promise.all([request1Promise, stateRequestPromise]);
+                actualRequest1Response = await request1.resultPromise;
+                const [_, _stateRequest] = await stateRequestPromise;
+                stateRequest = _stateRequest;
             });
 
             it('no further instances should have been created yet', () => {
@@ -67,15 +64,16 @@ describe('when we create a state worker', () => {
                 let secondExecutionRequest;
 
                 beforeAll(async () => {
-                    const secondExecutionRequestPromise = getNext(lifeCycle.firstChildProcess.executionRequest);
-                    lifeCycle.firstChildProcess.stateResponse.dispatch(state);
-                    [secondExecutionRequest] = await secondExecutionRequestPromise;
+                    const secondExecutionRequestPromise = getNext(lifeCycle.executionRequested);
+                    stateRequest.respond(state);
+                    const [_, executionRequest] = await secondExecutionRequestPromise;
+                    secondExecutionRequest = executionRequest;
                 });
 
                 it('should have asked the first instance to execute the second request', () => {
                     expect(secondExecutionRequest.content).toEqual({
                         methodName: queryMethodName,
-                        args: [request2Argument],
+                        args: request2.args,
                         isCommand: false
                     })
                 });
