@@ -9,26 +9,17 @@ export class FakeChildProcess{
         this.state = new RequestAndResponse();
         this.execution = new RequestAndResponse();
     }
-    get initializationRequest(){
-        return this.initialization.request;
+    getInitializationRequest(){
+        return this.initialization.request.getOrWaitForItem();
     }
-    get stateRequest(){
-        return this.state.request;
-    }
-    get executionRequest(){
-        return this.execution.request;
+    getStateRequest(){
+        return this.state.request.getOrWaitForItem();
     }
     getState(){
         return this.state.getResponse();
     }
     performExecution(execution){
         return this.execution.getResponse(execution);
-    }
-    async notifyStarted(){
-        const initializationRequestPromise = getNext(this.initializationRequest);
-        this.started.dispatch();
-        const [request] = await initializationRequestPromise;
-        return request;
     }
     whenStarted(){
         return getNext(this.started);

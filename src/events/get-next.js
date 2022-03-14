@@ -1,9 +1,6 @@
-export function getNext(eventSource, predicate){
+export function getNext(eventSource){
     return new Promise((res) => {
         const listener = (...args) => {
-            if(predicate && !predicate(...args)){
-                return;
-            }
             eventSource.removeListener(listener);
             res(args);
         };

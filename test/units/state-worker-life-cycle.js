@@ -1,61 +1,48 @@
 import { createStateWorkerFactory } from '../../src/state-worker-factory-factory';
-import { FakeChildProcessFactory } from './fake-child-process-factory';
-import { getNext } from '../../src/events/get-next';
-import { Event } from '../../src/events/event';
-
-class TestRequest{
-    constructor(methodName, args, resultPromise){
-        this.methodName = methodName;
-        this.args = args;
-        this.resultPromise = resultPromise;
-    }
-}
+import { NotifyingList } from './notifying-list';
 
 export class StateWorkerLifeCycle{
-    constructor(baseURI, config){
-        this.config = config;
-        this.childProcessFactory = new FakeChildProcessFactory(baseURI);
-        this.executionRequested = new Event();
-        this.stateRequested = new Event();
-        this.creationPromise = undefined;
-        this.firstChildProcess = undefined;
-        this.firstInitializationRequest = undefined;
-        this.stateWorker = undefined;
-        this.childProcessFactory.childProcessCreated.addListener((childProcess) => {
-            childProcess.executionRequest.addListener((executionRequest) => {
-                this.executionRequested.dispatch(childProcess, executionRequest);
+    constructor(fakeChildProcessFactory){
+        this.fakeChildProcessFactory = fakeChildProcessFactory;
+        this.childProcesses = new NotifyingList();
+        this.stateWorkers = new NotifyingList();
+        this.executionRequests = new NotifyingList();
+
+        fakeChildProcessFactory.childProcessCreated.addListener((childProcess) => {
+            this.childProcesses.add(childProcess);
+            childProcess.execution.requestAdded.addListener((executionRequest) => {
+                this.executionRequests.add({childProcess, executionRequest})
             });
-            childProcess.stateRequest.addListener((stateRequest) => {
-                this.stateRequested.dispatch(childProcess, stateRequest);
-            });
-        })
+        });
     }
-    getNumberOfChildProcesses(){
-        return this.childProcessFactory.childProcesses.length;
+    getOrWaitForStateWorker(){
+        return this.stateWorkers.getOrWaitForItem();
     }
-    async finishCreation(firstInitializationResult){
-        if(!this.firstInitializationRequest){
-            await this.notifyFirstChildProcessStarted();
-        }
-        this.firstInitializationRequest.respond(firstInitializationResult);
-        this.stateWorker = await this.creationPromise;
+    getOrWaitForChildProcess(){
+        return this.childProcesses.getOrWaitForItem();
     }
-    async notifyFirstChildProcessStarted(){
-        if(!this.firstChildProcess){
-            await this.start();
-        }
-        this.firstInitializationRequest = await this.firstChildProcess.notifyStarted();
+    getOrWaitForExecutionRequest(){
+        return this.executionRequests.getOrWaitForItem();
     }
-    async start(){
-        const firstChildProcessPromise = getNext(this.childProcessFactory.childProcessCreated);
-        this.creationPromise = (createStateWorkerFactory(() => this.childProcessFactory, p => p))(this.config);
-        const [firstChildProcess] = await firstChildProcessPromise;
-        this.firstChildProcess = firstChildProcess;
+    whenNoChildProcessAdded(timeout){
+        return this.childProcesses.whenNoneAdded(timeout);
     }
-    addRequest(methodName, args){
-        return new TestRequest(
-            methodName,
-            args,
-            this.stateWorker[methodName](...args))
+    getOrWaitForNumberOfChildProcesses(number){
+        return this.childProcesses.getOrWaitForNumberOfItems(number);
+    }
+    getAllChildProcesses(){
+        return this.childProcesses.getAll();
+    }
+    async begin(config){
+        const stateWorker = await (createStateWorkerFactory(() => this.fakeChildProcessFactory, p => p))(config);
+        this.stateWorkers.add(stateWorker);
+    }
+    async createStateWorker(config, initializationResponse){
+        this.begin(config);
+        const childProcess = await this.getOrWaitForChildProcess();
+        childProcess.started.dispatch();
+        const initializationRequest = await childProcess.getInitializationRequest();
+        initializationRequest.respond(initializationResponse);
+        return {stateWorker: await this.getOrWaitForStateWorker(), childProcess};
     }
 }

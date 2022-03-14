@@ -2,6 +2,7 @@ import { Execution } from './execution';
 import { InstanceCreation } from './instance-creation';
 import { Event } from './events/event';
 import { getNext } from './events/get-next';
+import { filter } from './events/filter';
 
 export class StateWorkerInstanceManager{
     constructor(instanceFactory, maxNumberOfProcesses){
@@ -75,7 +76,7 @@ export class StateWorkerInstanceManager{
         }
     }
     async getExecutionResult(execution){
-        const [_, result, error] = await getNext(this.executionResult, (_execution) => _execution === execution);
+        const [_, result, error] = await getNext(filter(this.executionResult, (_execution) => _execution === execution));
         if(error){
             throw new Error(error);
         }
