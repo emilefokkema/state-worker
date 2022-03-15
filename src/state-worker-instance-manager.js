@@ -38,6 +38,7 @@ export class StateWorkerInstanceManager{
         this.pendingInstanceCreations.splice(index, 1);
         this.idleInstances.push(instance);
         this.instances.push(instance);
+        this.next();
     }
     async createNewInstancesUsingInstance(instance){
         const pendingInstanceCreationsThatCanStart = this.pendingInstanceCreations.filter(c => c.canStart());

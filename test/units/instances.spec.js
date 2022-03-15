@@ -115,6 +115,27 @@ describe('when we create a state worker', () => {
                                 config, baseURI, state
                             });
                         });
+
+                        describe('and then the second child process finishes initializing', () => {
+                            let thirdExecutionRequest;
+                            let thirdExecutionRequestChildProcess;
+
+                            beforeAll(async () => {
+                                secondInitializationRequest.respond({methodCollection: {queries: [queryMethodName], commands: []}});
+                                const {childProcess, executionRequest} = await lifeCycle.getOrWaitForExecutionRequest();
+                                thirdExecutionRequest = executionRequest;
+                                thirdExecutionRequestChildProcess = childProcess;
+                            });
+
+                            it('the second child process should have been asked to execute the third request', () => {
+                                expect(thirdExecutionRequestChildProcess).toBe(secondChildProcess);
+                                expect(thirdExecutionRequest.content).toEqual({
+                                    methodName: queryMethodName,
+                                    args: [3],
+                                    isCommand: false
+                                })
+                            })
+                        });
                     });
                 });
             });
