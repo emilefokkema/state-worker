@@ -7,12 +7,15 @@ describe('when we create a state worker', () => {
     const config = {
         maxNumberOfProcesses: 3
     };
+    const initializationResponse = {
+        methodCollection: {queries: [queryMethodName], commands: []}
+    };
     let lifeCycle;
     let stateWorker;
 
     beforeAll(async () => {
         lifeCycle = new StateWorkerLifeCycle(new FakeChildProcessFactory(baseURI));
-        ({stateWorker} = await lifeCycle.createStateWorker(config, {methodCollection: {queries: [queryMethodName], commands: []}}))
+        ({stateWorker} = await lifeCycle.createStateWorker(config, initializationResponse))
     });
 
     it('should be there', () => {
@@ -121,7 +124,7 @@ describe('when we create a state worker', () => {
                             let thirdExecutionRequestChildProcess;
 
                             beforeAll(async () => {
-                                secondInitializationRequest.respond({methodCollection: {queries: [queryMethodName], commands: []}});
+                                secondInitializationRequest.respond(initializationResponse);
                                 const {childProcess, executionRequest} = await lifeCycle.getOrWaitForExecutionRequest();
                                 thirdExecutionRequest = executionRequest;
                                 thirdExecutionRequestChildProcess = childProcess;
@@ -134,7 +137,52 @@ describe('when we create a state worker', () => {
                                     args: [3],
                                     isCommand: false
                                 })
-                            })
+                            });
+
+                            describe('and then the third child process finishes initializing', () => {
+                                let fourthExecutionRequest;
+                                let fourthExecutionRequestChildProcess;
+
+                                beforeAll(async () => {
+                                    thirdInitializationRequest.respond(initializationResponse);
+                                    const {childProcess, executionRequest} = await lifeCycle.getOrWaitForExecutionRequest();
+                                    fourthExecutionRequest = executionRequest;
+                                    fourthExecutionRequestChildProcess = childProcess;
+                                });
+
+                                it('the third child process should have been asked to execute the fourth request', () => {
+                                    expect(fourthExecutionRequestChildProcess).toBe(thirdChildProcess);
+                                    expect(fourthExecutionRequest.content).toEqual({
+                                        methodName: queryMethodName,
+                                        args: [4],
+                                        isCommand: false
+                                    })
+                                });
+
+                                describe('and then when the three remaining executions requests get a response', () => {
+                                    const expectedRequest2Response = 'b';
+                                    const expectedRequest3Response = 'c';
+                                    const expectedRequest4Response = 'd';
+
+                                    beforeAll(() => {
+                                        secondExecutionRequest.respond({result: expectedRequest2Response});
+                                        thirdExecutionRequest.respond({result: expectedRequest3Response});
+                                        fourthExecutionRequest.respond({result: expectedRequest4Response});
+                                    });
+
+                                    it('the three remaining requests should have resolved', async () => {
+                                        expect(await Promise.all([
+                                            request2ResultPromise,
+                                            request3ResultPromise,
+                                            request4ResultPromise
+                                        ])).toEqual([
+                                            expectedRequest2Response,
+                                            expectedRequest3Response,
+                                            expectedRequest4Response
+                                        ])
+                                    });
+                                });
+                            });
                         });
                     });
                 });

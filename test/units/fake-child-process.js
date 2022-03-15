@@ -4,7 +4,9 @@ import { RequestAndResponse } from './request-and-response';
 
 export class FakeChildProcess{
     constructor(){
+        this.hasTerminated = false;
         this.started = new Event();
+        this.terminated = new Event();
         this.initialization = new RequestAndResponse();
         this.state = new RequestAndResponse();
         this.execution = new RequestAndResponse();
@@ -23,6 +25,16 @@ export class FakeChildProcess{
     }
     whenStarted(){
         return getNext(this.started);
+    }
+    async whenTerminated(){
+        if(this.hasTerminated){
+            return;
+        }
+        await getNext(this.terminated);
+    }
+    terminate(){
+        this.hasTerminated = true;
+        this.terminated.dispatch();
     }
     initialize(config, baseURI, state){
         return this.initialization.getResponse({config, baseURI, state});

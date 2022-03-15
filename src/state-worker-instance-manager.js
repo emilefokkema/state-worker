@@ -22,6 +22,10 @@ export class StateWorkerInstanceManager{
         for(let pendingInstanceCreation of this.pendingInstanceCreations){
             pendingInstanceCreation.cancel();
         }
+        const pendingExecutions = this.pendingExecutions.splice(0, this.pendingExecutions.length);
+        for(let pendingExecution of pendingExecutions){
+            this.executionResult.dispatch(pendingExecution, undefined, 'state worker was terminated');
+        }
     }
     async performNewInstanceCreation(instanceCreation, state){
         if(!instanceCreation.canStart()){
