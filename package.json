@@ -4,6 +4,7 @@
   "description": "Share a state between processes, change it an query it",
   "main": "dist/state-worker.js",
   "scripts": {
+    "test": "npm run test-units && npm run build-dev && npm run test-node && npm run test-web",
     "test-units": "jest --config jest-units.config.js",
     "test-node": "jest --config jest-node.config.js",
     "test-web": "karma start",
