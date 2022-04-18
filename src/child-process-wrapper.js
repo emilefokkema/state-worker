@@ -1,5 +1,6 @@
 import { ProcessMessageEventSource } from './events/process-message-event-source';
 import { RequestTarget } from './events/request-target';
+import { RequestSource } from './events/request-source';
 import { filter } from './events/filter';
 import { getNext } from './events/get-next';
 
@@ -8,7 +9,10 @@ class ChildProcessWrapper{
         this.childProcess = childProcess;
         const childProcessMessage = new ProcessMessageEventSource(childProcess);
         this.startedMessage = filter(childProcessMessage, ({type}) => type === 'started');
+        this.onIdle = filter(childProcessMessage, ({type}) => type === 'idle');
         this.requestTarget = new RequestTarget(childProcess);
+        const requestSource = new RequestSource(childProcess);
+        this.onIdleRequested = filter(requestSource, ({type}) => type === 'requestIdle');
     }
     terminate(){
         this.childProcess.terminate();

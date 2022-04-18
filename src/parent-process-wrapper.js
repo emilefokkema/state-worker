@@ -1,4 +1,5 @@
 import { RequestSource } from './events/request-source';
+import { RequestTarget } from './events/request-target';
 import { filter } from './events/filter';
 
 class ParentProcessWrapper{
@@ -8,9 +9,16 @@ class ParentProcessWrapper{
         this.onExecutionRequested = filter(requestSource, ({type}) => type === 'execution');
         this.onStateRequested = filter(requestSource, ({type}) => type === 'state');
         this.onInitializationRequested = filter(requestSource, ({type}) => type === 'initialize');
+        this.requestTarget = new RequestTarget(parentProcess);
     }
     notifyStarted(){
         this.parentProcess.sendMessage({type: 'started'});
+    }
+    notifyIdle(){
+        this.parentProcess.sendMessage({type: 'idle'});
+    }
+    requestIdle(){
+        return this.requestTarget.getResponse({type: 'requestIdle'});
     }
 }
 

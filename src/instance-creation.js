@@ -1,18 +1,16 @@
+import { CancellationToken } from './events/cancellation-token';
+
 export class InstanceCreation{
     constructor(){
-        this.started = false;
-        this.cancelled = false;
+        this.cancellationToken = new CancellationToken();
+    }
+    get cancelled(){
+        return this.cancellationToken.cancelled;
+    }
+    onCancelled(listener){
+        this.cancellationToken.addListener(listener);
     }
     cancel(){
-        this.cancelled = true;
-    }
-    canStart(){
-        return !this.started && !this.cancelled;
-    }
-    canFinish(){
-        return !this.cancelled;
-    }
-    start(){
-        this.started = true;
+        this.cancellationToken.cancel();
     }
 }

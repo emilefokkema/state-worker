@@ -10,6 +10,8 @@ export class FakeChildProcess{
         this.initialization = new RequestAndResponse();
         this.state = new RequestAndResponse();
         this.execution = new RequestAndResponse();
+        this.onIdleRequested = new RequestAndResponse();
+        this.onIdle = new Event();
     }
     getInitializationRequest(){
         return this.initialization.request.getOrWaitForItem();
@@ -22,6 +24,9 @@ export class FakeChildProcess{
     }
     performExecution(execution){
         return this.execution.getResponse(execution);
+    }
+    requestIdle(){
+        return this.onIdleRequested.getResponse();
     }
     whenStarted(){
         return getNext(this.started);

@@ -5,8 +5,11 @@ class PipedEventSource{
         this.listeners = [];
     }
     addListener(listener){
-        const mappedListener = this.mapFn(listener);
-        this.listeners.push({listener, mappedListener});
+        const record = {attached: true};
+        const mappedListener = this.mapFn.apply(record, [listener]);
+        record.listener = listener;
+        record.mappedListener = mappedListener;
+        this.listeners.push(record);
         this.eventSource.addListener(mappedListener);
     }
     removeListener(listener){
@@ -16,6 +19,7 @@ class PipedEventSource{
         }
         const [record] = this.listeners.splice(index, 1);
         this.eventSource.removeListener(record.mappedListener);
+        record.attached = false;
     }
 }
 

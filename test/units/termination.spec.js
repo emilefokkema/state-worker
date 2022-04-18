@@ -154,9 +154,9 @@ describe('when we create a state worker', () => {
                     });
 
                     it('the three remaining requests should result in error', async () => {
-                        await expect(request2ResultPromise).rejects.toThrow('state worker was terminated')
-                        await expect(request3ResultPromise).rejects.toThrow('state worker was terminated')
-                        await expect(request4ResultPromise).rejects.toThrow('state worker was terminated')
+                        await expect(request2ResultPromise).rejects.toThrow('execution was cancelled')
+                        await expect(request3ResultPromise).rejects.toThrow('execution was cancelled');
+                        await expect(request4ResultPromise).rejects.toThrow('execution was cancelled');
                     });
 
                     it('no further child processes should be created', async () => {

@@ -40,8 +40,7 @@ describe('when we create a state worker', () => {
         it('should have asked to execute the first request', () => {
             expect(firstExecutionRequest.content).toEqual({
                 methodName: queryMethodName,
-                args: [1],
-                isCommand: false
+                args: [1]
             })
         });
 
@@ -79,8 +78,7 @@ describe('when we create a state worker', () => {
                     expect(secondExecutionRequestChildProcess).toBe(firstExecutionRequestChildProcess);
                     expect(secondExecutionRequest.content).toEqual({
                         methodName: queryMethodName,
-                        args: [2],
-                        isCommand: false
+                        args: [2]
                     })
                 });
 
@@ -134,8 +132,7 @@ describe('when we create a state worker', () => {
                                 expect(thirdExecutionRequestChildProcess).toBe(secondChildProcess);
                                 expect(thirdExecutionRequest.content).toEqual({
                                     methodName: queryMethodName,
-                                    args: [3],
-                                    isCommand: false
+                                    args: [3]
                                 })
                             });
 
@@ -154,8 +151,7 @@ describe('when we create a state worker', () => {
                                     expect(fourthExecutionRequestChildProcess).toBe(thirdChildProcess);
                                     expect(fourthExecutionRequest.content).toEqual({
                                         methodName: queryMethodName,
-                                        args: [4],
-                                        isCommand: false
+                                        args: [4]
                                     })
                                 });
 
