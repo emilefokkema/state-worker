@@ -52,12 +52,20 @@ export class StateWorkerInstanceManager{
         const [state] = await responsePromise;
         return state;
     }
-    async getIdleInstance({createNew, priority, specificInstance}){
-        const index = this.availableInstances.findIndex(i => !specificInstance || i === specificInstance);
-        if(index > -1){
-            const [instance] = this.availableInstances.splice(index, 1);
-            return instance;
+    async getIdleInstance({createNew, priority, specificInstance, all}){
+        if(all){
+            if(this.instances.length === this.availableInstances.length){
+                this.availableInstances.splice(0, this.availableInstances.length);
+                return;
+            }
+        }else{
+            const index = this.availableInstances.findIndex(i => !specificInstance || i === specificInstance);
+            if(index > -1){
+                const [instance] = this.availableInstances.splice(index, 1);
+                return instance;
+            }
         }
+        
         const idleInstanceRequest = {specificInstance};
         const responsePromise = getNext(filter(this.idleInstanceResponse, (_request) => _request === idleInstanceRequest));
         if(priority){
@@ -71,6 +79,9 @@ export class StateWorkerInstanceManager{
         }
         const [_, instance] = await responsePromise;
         return instance;
+    }
+    async whenAllInstancesIdle(){
+        await this.getIdleInstance({all: true});
     }
     releaseIdleInstance(instance){
         let index = this.pendingIdleInstanceRequests.findIndex(r => r.specificInstance === instance);
@@ -126,12 +137,14 @@ export class StateWorkerInstanceManager{
         let result;
         try{
             result = await executeAndThrowWhenCancelled(async () => {
-                const instance = await this.getIdleInstance({createNew: false, priority: false});
-                if(execution.cancellationToken.cancelled){
-                    return;
-                }
+                //console.log(`before executing ${execution}, waiting for all instances to be idle...`)
+                await this.whenAllInstancesIdle();
+                //console.log(`all instances are idle. Now going to execute ${execution}`)
+                const instance = this.instances[0];
                 const result = await instance.performExecution({methodName, args});
-                this.releaseIdleInstance(instance);
+                for(let idleInstance of this.instances){
+                    this.releaseIdleInstance(idleInstance);
+                }
                 return result;
             }, execution.cancellationToken);
         }catch(e){

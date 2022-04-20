@@ -7,7 +7,7 @@ describe('when we create a state worker', () => {
     const commandMethodName = 'doThings';
     const baseUri = 'http://base.uri';
     const config = {
-        maxNumberOfProcesses: 2,
+        maxNumberOfProcesses: 3,
         gracefulQueryCancellation: true
     };
     const initializationResponse = {
@@ -28,6 +28,7 @@ describe('when we create a state worker', () => {
         let secondExecutionRequest;
         let thirdQueryResultPromise;
         let secondChildProcess;
+        let thirdChildProcess;
         let thirdExecutionRequestChildProcess;
         let thirdExecutionRequest;
         let fourthQueryResultPromise;
@@ -45,13 +46,14 @@ describe('when we create a state worker', () => {
             const stateRequest = await firstExecutionRequestChildProcess.getStateRequest();
             stateRequest.respond(0);
             ({childProcess: secondExecutionRequestChildProcess, executionRequest: secondExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
-            secondChildProcess = await lifeCycle.getOrWaitForChildProcess();
+            [secondChildProcess, thirdChildProcess] = await lifeCycle.getOrWaitForNumberOfChildProcesses(2);
             secondChildProcess.started.dispatch();
             const initializationRequest = await secondChildProcess.getInitializationRequest();
             initializationRequest.respond(initializationResponse);
             ({childProcess: thirdExecutionRequestChildProcess, executionRequest: thirdExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
             firstExecutionRequestChildProcess.onIdle.dispatch();
             ({childProcess: fourthExecutionRequestChildProcess, executionRequest: fourthExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
+            firstExecutionRequestChildProcess.requestIdle();
         });
 
         it('the right requests should have been sent to the right processes', () => {
@@ -71,6 +73,23 @@ describe('when we create a state worker', () => {
             expect(firstExecutionRequestChildProcess).toBe(fourthExecutionRequestChildProcess);
             expect(firstExecutionRequestChildProcess).not.toBe(thirdExecutionRequestChildProcess);
             expect(thirdExecutionRequestChildProcess).toBe(secondChildProcess)
+        });
+
+        describe('and then two commands and a query are added', () => {
+            let firstCommandResultPromise;
+            let secondCommandResultPromise;
+            let fifthQueryResultPromise;
+
+            beforeAll(() => {
+                firstCommandResultPromise = stateWorker[commandMethodName]('a');
+                secondCommandResultPromise = stateWorker[commandMethodName]('b');
+                fifthQueryResultPromise = stateWorker[queryMethodName](5);
+            });
+
+            it('should', async () => {
+                await new Promise(res => setTimeout(res, 200));
+                expect(true).toBe(true);
+            });
         });
     });
 });
