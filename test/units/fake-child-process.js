@@ -25,8 +25,8 @@ export class FakeChildProcess{
     performExecution(execution){
         return this.execution.getResponse(execution);
     }
-    requestIdle(){
-        return this.onIdleRequested.getResponse();
+    requestIdle(executionId){
+        return this.onIdleRequested.getResponse({executionId});
     }
     whenStarted(){
         return getNext(this.started);

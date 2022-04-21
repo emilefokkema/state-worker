@@ -9,6 +9,6 @@ export class Execution{
         this.cancellationToken = new CancellationToken();
     }
     toString(){
-        return `${this.methodName}(${this.args.map(a => JSON.stringify(a)).join(', ')})`
+        return `[#${this.id}] ${this.methodName}(${this.args.map(a => JSON.stringify(a)).join(', ')})`
     }
 }

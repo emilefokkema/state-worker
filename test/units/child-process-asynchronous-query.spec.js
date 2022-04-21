@@ -80,7 +80,7 @@ describe('given a child process', () => {
             });
 
             it('the child process should have requested to be considered idle again', () => {
-                expect(onceAgainIdleRequest).toBeTruthy();
+                expect(onceAgainIdleRequest.content).toEqual({executionId: 1})
             });
 
             describe('and then the child process is considered idle again', () => {

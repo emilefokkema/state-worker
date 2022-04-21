@@ -55,7 +55,7 @@ describe('when we create a state worker', () => {
             ({childProcess: thirdExecutionRequestChildProcess, executionRequest: thirdExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
             firstExecutionRequestChildProcess.onIdle.dispatch();
             ({childProcess: fourthExecutionRequestChildProcess, executionRequest: fourthExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
-            firstExecutionRequestChildProcess.requestIdle();
+            firstExecutionRequestChildProcess.requestIdle(1);
         });
 
         it('the right requests should have been sent to the right processes', () => {

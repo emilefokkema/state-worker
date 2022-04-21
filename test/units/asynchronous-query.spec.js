@@ -59,7 +59,7 @@ describe('when we create a state worker', () => {
                     let idlePromise;
 
                     beforeAll(() => {
-                        idlePromise = firstRequestChildProcess.requestIdle();
+                        idlePromise = firstRequestChildProcess.requestIdle(0);
                     });
 
                     describe('and now the process that is executing the first request returns the state', () => {
@@ -133,7 +133,7 @@ describe('when we create a state worker', () => {
                                         let secondProcessIdlePromise;
 
                                         beforeAll(() => {
-                                            secondProcessIdlePromise = secondChildProcess.requestIdle();
+                                            secondProcessIdlePromise = secondChildProcess.requestIdle(1);
                                         });
 
                                         describe('and now we make a fourth request', () => {
@@ -187,7 +187,7 @@ describe('when we create a state worker', () => {
                                                             let secondProcessIdleAgainPromise;
 
                                                             beforeAll(() => {
-                                                                secondProcessIdleAgainPromise = secondChildProcess.requestIdle();
+                                                                secondProcessIdleAgainPromise = secondChildProcess.requestIdle(2);
                                                             });
 
                                                             describe('and now the execution of the second request completes', () => {
@@ -227,13 +227,13 @@ describe('when we create a state worker', () => {
                                                                         const thirdExecutionResult = 102;
                                                                         thirdExecutionRequest.respond({result: thirdExecutionResult});
                                                                         expect(await thirdRequestResultPromise).toEqual(thirdExecutionResult);
-                                                                        let firstProcessIdleAgainPromise = firstRequestChildProcess.requestIdle();
+                                                                        let firstProcessIdleAgainPromise = firstRequestChildProcess.requestIdle(3);
                                                                         firstRequestChildProcess.onIdle.dispatch();
                                                                         await firstProcessIdleAgainPromise;
                                                                         const fourthExecutionResult = 103;
                                                                         fourthExecutionRequest.respond({result: fourthExecutionResult});
                                                                         expect(await fourthRequestResultPromise).toEqual(fourthExecutionResult);
-                                                                        await firstRequestChildProcess.requestIdle();
+                                                                        await firstRequestChildProcess.requestIdle(4);
                                                                         const fifthExecutionResult = 104;
                                                                         fifthExecutionRequest.respond({result: fifthExecutionResult});
                                                                         expect(await fifthRequestResultPromise).toEqual(fifthExecutionResult);

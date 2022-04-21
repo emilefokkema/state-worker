@@ -17,8 +17,8 @@ class ParentProcessWrapper{
     notifyIdle(){
         this.parentProcess.sendMessage({type: 'idle'});
     }
-    requestIdle(){
-        return this.requestTarget.getResponse({type: 'requestIdle'});
+    requestIdle(executionId){
+        return this.requestTarget.getResponse({type: 'requestIdle', executionId});
     }
 }
 

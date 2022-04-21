@@ -25,7 +25,7 @@ export class FakeParentProcess{
     notifyIdle(){
         this.idle.dispatch();
     }
-    requestIdle(){
-        return this.idleRequest.getResponse();
+    requestIdle(executionId){
+        return this.idleRequest.getResponse({executionId});
     }
 }
