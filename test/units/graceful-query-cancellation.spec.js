@@ -45,8 +45,6 @@ describe('when we create a state worker', () => {
             fifthQueryResultPromise = stateWorker[queryMethodName](5);
             ({childProcess: firstExecutionRequestChildProcess, executionRequest: firstExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
             firstExecutionRequest.respond({result: 9});
-            const stateRequest = await firstExecutionRequestChildProcess.getStateRequest();
-            stateRequest.respond(0);
             ({childProcess: secondExecutionRequestChildProcess, executionRequest: secondExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
             [secondChildProcess, thirdChildProcess] = await lifeCycle.getOrWaitForNumberOfChildProcesses(2);
             secondChildProcess.started.dispatch();

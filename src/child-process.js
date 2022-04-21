@@ -52,23 +52,45 @@ export function start(importer, parentProcess){
     });
 
     parentProcess.onExecutionRequested.addListener(({methodName, args, executionId}, sendResponse) => {
+        const query = queries[methodName];
+        const command = commands[methodName];
+        const method = command || query;
+        const isCommand = method === command;
+        const withState = getWithState(executionId);
         try{
-            const method = commands[methodName] || queries[methodName];
-            const withState = getWithState(executionId);
             const result = method.apply(withState, args);
             state = withState.state;
             if(result instanceof Promise){
-                result.then((res) => sendResponse({result: res})).catch((e) => sendResponse({error: e.toString()}))
+                result.then((res) => {
+                    state = withState.state;
+                    const response = {result: res};
+                    if(isCommand){
+                        response.state = state;
+                    }
+                    sendResponse(response)
+                }).catch((e) => {
+                    state = withState.state;
+                    const response = {error: e.toString()};
+                    if(isCommand){
+                        response.state = state;
+                    }
+                    sendResponse(response)
+                })
             }else{
-                sendResponse({result})
+                const response = {result};
+                if(isCommand){
+                    response.state = state;
+                }
+                sendResponse(response)
             }
         }catch(e){
-            sendResponse({error: e.toString()})
+            state = withState.state;
+            const response = {error: e.toString()};
+            if(isCommand){
+                response.state = state;
+            }
+            sendResponse(response);
         }
-    });
-
-    parentProcess.onStateRequested.addListener((_, sendResponse) => {
-        sendResponse(state);
     });
 
     parentProcess.notifyStarted();

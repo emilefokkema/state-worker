@@ -36,209 +36,183 @@ describe('when we create a state worker', () => {
             });
         });
 
-        describe('and then we make a second request', () => {
+        describe('and then we make a second request and a second child process is started', () => {
             let secondRequestResultPromise;
+            let secondChildProcess;
+            let secondChildProcessInitializationRequest;
 
-            beforeAll(() => {
+            beforeAll(async () => {
                 secondRequestResultPromise = stateWorker[queryMethodName](2);
+                secondChildProcess = await lifeCycle.getOrWaitForChildProcess();
+                secondChildProcess.started.dispatch();
+                secondChildProcessInitializationRequest = await secondChildProcess.getInitializationRequest();
             });
 
-            describe('and now the execution of the first request begins to wait', () => {
-                let stateRequest;
+            it('an initialization request should have been sent to the second child process', () => {
+                expect(secondChildProcessInitializationRequest.content).toEqual({
+                    baseURI: baseUri,
+                    config
+                });
+            });
+
+            describe('and then the second child process finishes initializing', () => {
+                let secondExecutionRequest;
+                let secondExecutionRequestChildProcess;
 
                 beforeAll(async () => {
-                    firstRequestChildProcess.onIdle.dispatch();
-                    stateRequest = await firstRequestChildProcess.getStateRequest();
+                    secondChildProcessInitializationRequest.respond(initializationResponse);
+                    ({childProcess: secondExecutionRequestChildProcess, executionRequest: secondExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
                 });
 
-                it('the process that is executing the first request should have been asked for the state', () => {
-                    expect(stateRequest).toBeTruthy();
+                it('the second child process should have been asked to execute the second request', () => {
+                    expect(secondExecutionRequestChildProcess).toBe(secondChildProcess);
+                    expect(secondExecutionRequest.content).toEqual({
+                        methodName: queryMethodName,
+                        args: [2],
+                        executionId: 1
+                    });
                 });
 
-                describe('and now the execution of the first request wants to resume', () => {
-                    let idlePromise;
+                describe('and then the execution of the first request begins to wait and then resumes', () => {
 
-                    beforeAll(() => {
-                        idlePromise = firstRequestChildProcess.requestIdle(0);
+                    beforeAll(async () => {
+                        firstRequestChildProcess.onIdle.dispatch();
+                        await firstRequestChildProcess.requestIdle(0);
                     });
 
-                    describe('and now the process that is executing the first request returns the state', () => {
-                        const state = 0;
-                        let secondChildProcess;
-                        let secondChildProcessInitializationRequest;
+                    describe('and then we make a third request', () => {
+                        let thirdRequestResultPromise;
 
-                        beforeAll(async () => {
-                            stateRequest.respond(state);
-                            secondChildProcess = await lifeCycle.getOrWaitForChildProcess();
-                            secondChildProcess.started.dispatch();
-                            secondChildProcessInitializationRequest = await secondChildProcess.getInitializationRequest();
+                        beforeAll(() => {
+                            thirdRequestResultPromise = stateWorker[queryMethodName](3);
                         });
 
-                        it('an initialization request should have been sent to the second child process', () => {
-                            expect(secondChildProcessInitializationRequest.content).toEqual({
-                                baseURI: baseUri,
-                                config,
-                                state
-                            });
-                        });
-
-                        it('the first child process should have been allowed to resume execution of the first request', async () => {
-                            await idlePromise;
-                        });
-
-                        describe('and then the second child process finishes initializing', () => {
-                            let secondExecutionRequest;
-                            let secondExecutionRequestChildProcess;
+                        describe('and now the execution of the second request begins to wait', () => {
+                            let thirdExecutionRequest;
+                            let thirdExecutionRequestChildProcess;
 
                             beforeAll(async () => {
-                                secondChildProcessInitializationRequest.respond(initializationResponse);
-                                ({childProcess: secondExecutionRequestChildProcess, executionRequest: secondExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
+                                secondChildProcess.onIdle.dispatch();
+                                ({childProcess: thirdExecutionRequestChildProcess, executionRequest: thirdExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
                             });
 
-                            it('the second child process should have been asked to execute the second request', () => {
-                                expect(secondExecutionRequestChildProcess).toBe(secondChildProcess);
-                                expect(secondExecutionRequest.content).toEqual({
+                            it('the second child process should have been asked to execute the third request', () => {
+                                expect(thirdExecutionRequestChildProcess).toBe(secondChildProcess);
+                                expect(thirdExecutionRequest.content).toEqual({
                                     methodName: queryMethodName,
-                                    args: [2],
-                                    executionId: 1
+                                    args: [3],
+                                    executionId: 2
                                 });
                             });
 
-                            describe('and then we make a third request', () => {
-                                let thirdRequestResultPromise;
+                            describe('and now the execution of the second request wants to resume', () => {
+                                let secondProcessIdlePromise;
 
                                 beforeAll(() => {
-                                    thirdRequestResultPromise = stateWorker[queryMethodName](3);
+                                    secondProcessIdlePromise = secondChildProcess.requestIdle(1);
                                 });
 
-                                describe('and now the execution of the second request begins to wait', () => {
-                                    let thirdExecutionRequest;
-                                    let thirdExecutionRequestChildProcess;
+                                describe('and now we make a fourth request', () => {
+                                    let fourthRequestResultPromise;
 
-                                    beforeAll(async () => {
-                                        secondChildProcess.onIdle.dispatch();
-                                        ({childProcess: thirdExecutionRequestChildProcess, executionRequest: thirdExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
+                                    beforeAll(() => {
+                                        fourthRequestResultPromise = stateWorker[queryMethodName](4);
                                     });
 
-                                    it('the second child process should have been asked to execute the third request', () => {
-                                        expect(thirdExecutionRequestChildProcess).toBe(secondChildProcess);
-                                        expect(thirdExecutionRequest.content).toEqual({
-                                            methodName: queryMethodName,
-                                            args: [3],
-                                            executionId: 2
-                                        });
-                                    });
+                                    describe('and now the execution of the first request completes', () => {
+                                        const firstExecutionResult = 100;
+                                        let fourthExecutionRequest;
+                                        let fourthExecutionRequestChildProcess;
 
-                                    describe('and now the execution of the second request wants to resume', () => {
-                                        let secondProcessIdlePromise;
-
-                                        beforeAll(() => {
-                                            secondProcessIdlePromise = secondChildProcess.requestIdle(1);
+                                        beforeAll(async () => {
+                                            firstExecutionRequest.respond({result: firstExecutionResult});
+                                            ({childProcess: fourthExecutionRequestChildProcess, executionRequest: fourthExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
                                         });
 
-                                        describe('and now we make a fourth request', () => {
-                                            let fourthRequestResultPromise;
+                                        it('the first request should have completed', async () => {
+                                            expect(await firstRequestResultPromise).toEqual(firstExecutionResult);
+                                        });
+
+                                        it('the first child process should have been asked to execute the fourth request', () => {
+                                            expect(fourthExecutionRequestChildProcess).toBe(firstRequestChildProcess);
+                                            expect(fourthExecutionRequest.content).toEqual({
+                                                methodName: queryMethodName,
+                                                args: [4],
+                                                executionId: 3
+                                            });
+                                        });
+
+                                        describe('and now we make a fifth request', () => {
+                                            let fifthRequestResultPromise;
 
                                             beforeAll(() => {
-                                                fourthRequestResultPromise = stateWorker[queryMethodName](4);
+                                                fifthRequestResultPromise = stateWorker[queryMethodName](5);
                                             });
 
-                                            describe('and now the execution of the first request completes', () => {
-                                                const firstExecutionResult = 100;
-                                                let fourthExecutionRequest;
-                                                let fourthExecutionRequestChildProcess;
+                                            describe('and now the execution of the third request begins to wait', () => {
 
-                                                beforeAll(async () => {
-                                                    firstExecutionRequest.respond({result: firstExecutionResult});
-                                                    ({childProcess: fourthExecutionRequestChildProcess, executionRequest: fourthExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
+                                                beforeAll(() => {
+                                                    secondChildProcess.onIdle.dispatch();
                                                 });
 
-                                                it('the first request should have completed', async () => {
-                                                    expect(await firstRequestResultPromise).toEqual(firstExecutionResult);
+                                                it('the second child process should be allowed to resume', async () => {
+                                                    await secondProcessIdlePromise;
                                                 });
 
-                                                it('the first child process should have been asked to execute the fourth request', () => {
-                                                    expect(fourthExecutionRequestChildProcess).toBe(firstRequestChildProcess);
-                                                    expect(fourthExecutionRequest.content).toEqual({
-                                                        methodName: queryMethodName,
-                                                        args: [4],
-                                                        executionId: 3
-                                                    });
-                                                });
-
-                                                describe('and now we make a fifth request', () => {
-                                                    let fifthRequestResultPromise;
+                                                describe('and now the execution of the third request wants to resume', () => {
+                                                    let secondProcessIdleAgainPromise;
 
                                                     beforeAll(() => {
-                                                        fifthRequestResultPromise = stateWorker[queryMethodName](5);
+                                                        secondProcessIdleAgainPromise = secondChildProcess.requestIdle(2);
                                                     });
 
-                                                    describe('and now the execution of the third request begins to wait', () => {
+                                                    describe('and now the execution of the second request completes', () => {
+                                                        const secondExecutionResult = 101;
 
                                                         beforeAll(() => {
-                                                            secondChildProcess.onIdle.dispatch();
+                                                            secondExecutionRequest.respond({result: secondExecutionResult});
+                                                        });
+
+                                                        it('the second request should have completed', async () => {
+                                                            expect(await secondRequestResultPromise).toEqual(secondExecutionResult);
                                                         });
 
                                                         it('the second child process should be allowed to resume', async () => {
-                                                            await secondProcessIdlePromise;
+                                                            await secondProcessIdleAgainPromise;
                                                         });
 
-                                                        describe('and now the execution of the third request wants to resume', () => {
-                                                            let secondProcessIdleAgainPromise;
+                                                        describe('and now execution of the fourth request begins to wait', () => {
+                                                            let fifthExecutionRequest;
+                                                            let fifthExecutionRequestChildProcess;
 
-                                                            beforeAll(() => {
-                                                                secondProcessIdleAgainPromise = secondChildProcess.requestIdle(2);
+                                                            beforeAll(async () => {
+                                                                firstRequestChildProcess.onIdle.dispatch();
+                                                                ({childProcess: fifthExecutionRequestChildProcess, executionRequest: fifthExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
                                                             });
 
-                                                            describe('and now the execution of the second request completes', () => {
-                                                                const secondExecutionResult = 101;
-
-                                                                beforeAll(() => {
-                                                                    secondExecutionRequest.respond({result: secondExecutionResult});
+                                                            it('the first child process should have been asked to execute the fifth request', () => {
+                                                                expect(fifthExecutionRequestChildProcess).toBe(firstRequestChildProcess);
+                                                                expect(fifthExecutionRequest.content).toEqual({
+                                                                    methodName: queryMethodName,
+                                                                    args: [5],
+                                                                    executionId: 4
                                                                 });
+                                                            });
 
-                                                                it('the second request should have completed', async () => {
-                                                                    expect(await secondRequestResultPromise).toEqual(secondExecutionResult);
-                                                                });
-
-                                                                it('the second child process should be allowed to resume', async () => {
-                                                                    await secondProcessIdleAgainPromise;
-                                                                });
-
-                                                                describe('and now execution of the fourth request begins to wait', () => {
-                                                                    let fifthExecutionRequest;
-                                                                    let fifthExecutionRequestChildProcess;
-
-                                                                    beforeAll(async () => {
-                                                                        firstRequestChildProcess.onIdle.dispatch();
-                                                                        ({childProcess: fifthExecutionRequestChildProcess, executionRequest: fifthExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
-                                                                    });
-
-                                                                    it('the first child process should have been asked to execute the fifth request', () => {
-                                                                        expect(fifthExecutionRequestChildProcess).toBe(firstRequestChildProcess);
-                                                                        expect(fifthExecutionRequest.content).toEqual({
-                                                                            methodName: queryMethodName,
-                                                                            args: [5],
-                                                                            executionId: 4
-                                                                        });
-                                                                    });
-
-                                                                    it('should wrap up', async () => {
-                                                                        const thirdExecutionResult = 102;
-                                                                        thirdExecutionRequest.respond({result: thirdExecutionResult});
-                                                                        expect(await thirdRequestResultPromise).toEqual(thirdExecutionResult);
-                                                                        let firstProcessIdleAgainPromise = firstRequestChildProcess.requestIdle(3);
-                                                                        firstRequestChildProcess.onIdle.dispatch();
-                                                                        await firstProcessIdleAgainPromise;
-                                                                        const fourthExecutionResult = 103;
-                                                                        fourthExecutionRequest.respond({result: fourthExecutionResult});
-                                                                        expect(await fourthRequestResultPromise).toEqual(fourthExecutionResult);
-                                                                        await firstRequestChildProcess.requestIdle(4);
-                                                                        const fifthExecutionResult = 104;
-                                                                        fifthExecutionRequest.respond({result: fifthExecutionResult});
-                                                                        expect(await fifthRequestResultPromise).toEqual(fifthExecutionResult);
-                                                                    });
-                                                                });
+                                                            it('should wrap up', async () => {
+                                                                const thirdExecutionResult = 102;
+                                                                thirdExecutionRequest.respond({result: thirdExecutionResult});
+                                                                expect(await thirdRequestResultPromise).toEqual(thirdExecutionResult);
+                                                                let firstProcessIdleAgainPromise = firstRequestChildProcess.requestIdle(3);
+                                                                firstRequestChildProcess.onIdle.dispatch();
+                                                                await firstProcessIdleAgainPromise;
+                                                                const fourthExecutionResult = 103;
+                                                                fourthExecutionRequest.respond({result: fourthExecutionResult});
+                                                                expect(await fourthRequestResultPromise).toEqual(fourthExecutionResult);
+                                                                await firstRequestChildProcess.requestIdle(4);
+                                                                const fifthExecutionResult = 104;
+                                                                fifthExecutionRequest.respond({result: fifthExecutionResult});
+                                                                expect(await fifthRequestResultPromise).toEqual(fifthExecutionResult);
                                                             });
                                                         });
                                                     });

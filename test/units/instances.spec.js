@@ -54,22 +54,15 @@ describe('when we create a state worker', () => {
                 actualRequest1Response = await request1ResultPromise;
             });
 
-            it('no further instances should have been created yet', () => {
-                expect(lifeCycle.getAllChildProcesses().length).toBe(0);
-            });
-
             it('the first request should have resolved', () => {
                 expect(actualRequest1Response).toEqual(expectedRequest1Response)
             });
 
-            describe('and then the first instance returns its state', () => {
-                const state = 42;
+            describe('and then we wait for another execution request', () => {
                 let secondExecutionRequest;
                 let secondExecutionRequestChildProcess;
 
                 beforeAll(async () => {
-                    const stateRequest = await firstExecutionRequestChildProcess.getStateRequest();
-                    stateRequest.respond(state);
                     const {childProcess, executionRequest} = await lifeCycle.getOrWaitForExecutionRequest();
                     secondExecutionRequest = executionRequest;
                     secondExecutionRequestChildProcess = childProcess;
@@ -112,10 +105,10 @@ describe('when we create a state worker', () => {
 
                         it('there should be two new initialization requests', () => {
                             expect(secondInitializationRequest.content).toEqual({
-                                config, baseURI, state
+                                config, baseURI
                             });
                             expect(thirdInitializationRequest.content).toEqual({
-                                config, baseURI, state
+                                config, baseURI
                             });
                         });
 

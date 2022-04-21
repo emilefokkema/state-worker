@@ -36,8 +36,6 @@ describe('when we create a state worker', () => {
             beforeAll(async () => {
                 const {childProcess, executionRequest} = await lifeCycle.getOrWaitForExecutionRequest();
                 executionRequest.respond({result: expectedRequest1Response});
-                const stateRequest = await childProcess.getStateRequest();
-                stateRequest.respond(42);
                 [secondChildProcess, thirdChildProcess] = await lifeCycle.getOrWaitForNumberOfChildProcesses(2);
                 secondChildProcess.started.dispatch();
                 secondInitializationRequest = await secondChildProcess.getInitializationRequest();
@@ -133,12 +131,10 @@ describe('when we create a state worker', () => {
         });
 
         describe('and then the first child process finishes handling the first request and is asked for its state', () => {
-            let stateRequest;
 
             beforeAll(async () => {
                 const {childProcess, executionRequest} = await lifeCycle.getOrWaitForExecutionRequest();
                 executionRequest.respond({result: 5});
-                stateRequest = await childProcess.getStateRequest();
             });
 
             describe('and then the state worker is terminated', () => {
@@ -147,21 +143,10 @@ describe('when we create a state worker', () => {
                     stateWorker.terminate();
                 });
 
-                describe('and then the first child process returns its state', () => {
-                    
-                    beforeAll(() => {
-                        stateRequest.respond(42);
-                    });
-
-                    it('the three remaining requests should result in error', async () => {
-                        await expect(request2ResultPromise).rejects.toThrow('execution was cancelled')
-                        await expect(request3ResultPromise).rejects.toThrow('execution was cancelled');
-                        await expect(request4ResultPromise).rejects.toThrow('execution was cancelled');
-                    });
-
-                    it('no further child processes should be created', async () => {
-                        await lifeCycle.whenNoChildProcessAdded(100);
-                    });
+                it('the three remaining requests should result in error', async () => {
+                    await expect(request2ResultPromise).rejects.toThrow('execution was cancelled')
+                    await expect(request3ResultPromise).rejects.toThrow('execution was cancelled');
+                    await expect(request4ResultPromise).rejects.toThrow('execution was cancelled');
                 });
             });
         });

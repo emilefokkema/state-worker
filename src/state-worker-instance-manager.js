@@ -19,6 +19,7 @@ export class StateWorkerInstanceManager{
         this.stateRequested = false;
         this.latestInstanceId = 0;
         this.latestRequestId = 0;
+        this.state = undefined;
     }
     terminate(){
         for(let instance of this.instances){
@@ -106,11 +107,7 @@ export class StateWorkerInstanceManager{
     async createNewInstance(){
         const pendingInstanceCreation = new InstanceCreation();
         this.pendingInstanceCreations.push(pendingInstanceCreation);
-        const state = await this.getState();
-        if(pendingInstanceCreation.cancelled){
-            return;
-        }
-        await this.addNewInstance(state, pendingInstanceCreation.cancellationToken);
+        await this.addNewInstance(this.state, pendingInstanceCreation.cancellationToken);
         const index = this.pendingInstanceCreations.indexOf(pendingInstanceCreation);
         this.pendingInstanceCreations.splice(index, 1);
     }
@@ -145,12 +142,13 @@ export class StateWorkerInstanceManager{
         let result;
         try{
             result = await executeAndThrowWhenCancelled(async () => {
-                console.log(`before executing ${execution}, waiting for all instances to be idle...`)
+                //console.log(`before executing ${execution}, waiting for all instances to be idle...`)
                 await this.whenAllInstancesIdle();
-                console.log(`all instances are idle. Now going to execute ${execution}`)
+                //console.log(`all instances are idle. Now going to execute ${execution}`)
                 const instance = this.instances[0];
                 const result = await instance.performExecution({methodName, args, executionId: execution.id});
                 this.removePendingExecution(execution);
+                this.state = result.state;
                 for(let idleInstance of this.instances){
                     this.releaseIdleInstance(idleInstance);
                 }
