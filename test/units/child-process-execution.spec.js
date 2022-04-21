@@ -51,7 +51,7 @@ describe('a child process', () => {
             let commandExecutionResponsePromise;
 
             beforeAll(() => {
-                commandExecutionResponsePromise = parentProcess.execute({methodName: 'add', args: [1]});
+                commandExecutionResponsePromise = parentProcess.execute({methodName: 'add', args: [1], executionId: 0});
             });
 
             it('should respond correctly', async () => {
@@ -63,8 +63,8 @@ describe('a child process', () => {
             });
 
             it('should respond to queries correctly', async () => {
-                expect(await parentProcess.execute({methodName: 'getSum', args: [1]})).toEqual({result: 2})
-                expect(await parentProcess.execute({methodName: 'getSum', args: [2]})).toEqual({result: 3})
+                expect(await parentProcess.execute({methodName: 'getSum', args: [1], executionId: 1})).toEqual({result: 2})
+                expect(await parentProcess.execute({methodName: 'getSum', args: [2], executionId: 2})).toEqual({result: 3})
             });
         });
     });

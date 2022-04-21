@@ -21,7 +21,7 @@ describe('when we create a state worker', () => {
         ({stateWorker} = await lifeCycle.createStateWorker(config, initializationResponse));
     });
 
-    describe('and we begin executing four queries, resulting in two active child processes', () => {
+    describe('and we begin executing five queries, resulting in three active child processes', () => {
         let firstExecutionRequestChildProcess;
         let secondQueryResultPromise;
         let secondExecutionRequestChildProcess;
@@ -34,6 +34,7 @@ describe('when we create a state worker', () => {
         let fourthQueryResultPromise;
         let fourthExecutionRequest;
         let fourthExecutionRequestChildProcess;
+        let fifthQueryResultPromise;
 
         beforeAll(async () => {
             let firstExecutionRequest;
@@ -41,6 +42,7 @@ describe('when we create a state worker', () => {
             secondQueryResultPromise = stateWorker[asyncQueryMethodName](2);
             thirdQueryResultPromise = stateWorker[queryMethodName](3);
             fourthQueryResultPromise = stateWorker[queryMethodName](4);
+            fifthQueryResultPromise = stateWorker[queryMethodName](5);
             ({childProcess: firstExecutionRequestChildProcess, executionRequest: firstExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
             firstExecutionRequest.respond({result: 9});
             const stateRequest = await firstExecutionRequestChildProcess.getStateRequest();
@@ -59,31 +61,37 @@ describe('when we create a state worker', () => {
         it('the right requests should have been sent to the right processes', () => {
             expect(secondExecutionRequest.content).toEqual({
                 methodName: asyncQueryMethodName,
-                args: [2]
+                args: [2],
+                executionId: 1
             });
             expect(thirdExecutionRequest.content).toEqual({
                 methodName: queryMethodName,
-                args: [3]
+                args: [3],
+                executionId: 2
             });
             expect(fourthExecutionRequest.content).toEqual({
                 methodName: queryMethodName,
-                args: [4]
+                args: [4],
+                executionId: 3
             });
             expect(firstExecutionRequestChildProcess).toBe(secondExecutionRequestChildProcess);
             expect(firstExecutionRequestChildProcess).toBe(fourthExecutionRequestChildProcess);
             expect(firstExecutionRequestChildProcess).not.toBe(thirdExecutionRequestChildProcess);
-            expect(thirdExecutionRequestChildProcess).toBe(secondChildProcess)
+            expect(thirdExecutionRequestChildProcess).toBe(secondChildProcess);
+            expect(thirdChildProcess).toBeTruthy();
+            expect(thirdChildProcess).not.toBe(firstExecutionRequestChildProcess);
+            expect(thirdChildProcess).not.toBe(secondChildProcess);
         });
 
         describe('and then two commands and a query are added', () => {
             let firstCommandResultPromise;
             let secondCommandResultPromise;
-            let fifthQueryResultPromise;
+            let sixthQueryResultPromise;
 
             beforeAll(() => {
                 firstCommandResultPromise = stateWorker[commandMethodName]('a');
                 secondCommandResultPromise = stateWorker[commandMethodName]('b');
-                fifthQueryResultPromise = stateWorker[queryMethodName](5);
+                sixthQueryResultPromise = stateWorker[queryMethodName](6);
             });
 
             it('should', async () => {

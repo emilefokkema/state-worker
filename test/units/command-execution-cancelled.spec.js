@@ -30,7 +30,8 @@ describe('when we create a state worker', () => {
         it('one execution request should have been sent to a child process', () => {
             expect(firstCommandExecutionRequest.content).toEqual({
                 methodName: commandMethodName,
-                args: [1]
+                args: [1],
+                executionId: 0
             });
         });
 
