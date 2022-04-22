@@ -111,57 +111,48 @@ export class StateWorkerInstanceManager{
         const index = this.pendingInstanceCreations.indexOf(pendingInstanceCreation);
         this.pendingInstanceCreations.splice(index, 1);
     }
-   
-    async executeQuery(methodName, args){
-        const execution = new Execution(this.latestRequestId++, methodName, args, false);
+    async performExecution(methodName, args, isCommand, fn){
+        const execution = new Execution(this.latestRequestId++, methodName, args, isCommand);
         this.pendingExecutions.push(execution);
         let result;
         try{
-            result = await executeAndThrowWhenCancelled(async () => {
-                await this.whenNoMoreCommandsPending();
-                const instance = await this.getIdleInstance({createNew: true, priority: false, executionId: execution.id});
-                if(execution.cancellationToken.cancelled){
-                    this.releaseIdleInstance(instance);
-                    return;
-                }
-                const result = await instance.performExecution({methodName, args, executionId: execution.id});
-                this.releaseIdleInstance(instance);
-                this.finishExecution(execution);
-                return result;
-            }, execution.cancellationToken);
+            result = await executeAndThrowWhenCancelled(() => fn(execution), execution.cancellationToken);
         }catch(e){
             throw new Error('execution was cancelled');
+        }finally{
+            this.finishExecution(execution);
         }
         if(result.error){
             throw new Error(result.error);
         }
         return result.result;
     }
+    async executeQuery(methodName, args){
+        return await this.performExecution(methodName, args, false, async (execution) => {
+            await this.whenNoMoreCommandsPending();
+            const instance = await this.getIdleInstance({createNew: true, priority: false, executionId: execution.id});
+            if(execution.cancellationToken.cancelled){
+                this.releaseIdleInstance(instance);
+                return;
+            }
+            const result = await instance.performExecution({methodName, args, executionId: execution.id});
+            this.releaseIdleInstance(instance);
+            return result;
+        });
+    }
     async executeCommand(methodName, args){
-        const execution = new Execution(this.latestRequestId++, methodName, args, true);
-        this.pendingExecutions.push(execution);
-        let result;
-        try{
-            result = await executeAndThrowWhenCancelled(async () => {
-                //console.log(`before executing ${execution}, waiting for all instances to be idle...`)
-                await this.whenAllInstancesIdle();
-                //console.log(`all instances are idle. Now going to execute ${execution}`)
-                const instance = this.instances[0];
-                const result = await instance.performExecution({methodName, args, executionId: execution.id});
-                this.finishExecution(execution);
-                this.state = result.state;
-                for(let idleInstance of this.instances){
-                    this.releaseIdleInstance(idleInstance);
-                }
-                return result;
-            }, execution.cancellationToken);
-        }catch(e){
-            throw new Error('execution was cancelled');
-        }
-        if(result.error){
-            throw new Error(result.error);
-        }
-        return result.result;
+        return await this.performExecution(methodName, args, true, async (execution) => {
+            //console.log(`before executing ${execution}, waiting for all instances to be idle...`)
+            await this.whenAllInstancesIdle();
+            //console.log(`all instances are idle. Now going to execute ${execution}`)
+            const instance = this.instances[0];
+            const result = await instance.performExecution({methodName, args, executionId: execution.id});
+            this.state = result.state;
+            for(let idleInstance of this.instances){
+                this.releaseIdleInstance(idleInstance);
+            }
+            return result;
+        });
     }
     async addNewInstance(state, cancellationToken){
         const instance = this.instanceFactory(this.latestInstanceId++);
