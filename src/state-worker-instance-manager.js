@@ -13,10 +13,9 @@ export class StateWorkerInstanceManager{
         this.availableInstances = [];
         this.pendingExecutions = [];
         this.idleInstanceResponse = new Event();
-        this.stateResponse = new Event();
+        this.executionFinished = new Event();
         this.pendingInstanceCreations = [];
         this.pendingIdleInstanceRequests = [];
-        this.stateRequested = false;
         this.latestInstanceId = 0;
         this.latestRequestId = 0;
         this.state = undefined;
@@ -34,12 +33,26 @@ export class StateWorkerInstanceManager{
             pendingExecution.cancellationToken.cancel();
         }
     }
-    removePendingExecution(execution){
+    finishExecution(execution){
         const index = this.pendingExecutions.indexOf(execution);
         if(index === -1){
             return;
         }
         this.pendingExecutions.splice(index, 1);
+        this.executionFinished.dispatch(execution);
+    }
+    async whenExecutionHasFinished(execution){
+        if(!this.pendingExecutions.includes(execution)){
+            return;
+        }
+        return await getNext(filter(this.executionFinished, (_execution) => _execution === execution));
+    }
+    async whenNoMoreCommandsPending(){
+        const commands = this.pendingExecutions.filter(e => e.isCommand);
+        if(commands.length === 0){
+            return;
+        }
+        await Promise.all(commands.map(c => this.whenExecutionHasFinished(c)));
     }
     removePendingIdleInstanceRequest(request){
         const index = this.pendingIdleInstanceRequests.indexOf(request);
@@ -47,19 +60,6 @@ export class StateWorkerInstanceManager{
             return;
         }
         this.pendingIdleInstanceRequests.splice(index, 1);
-    }
-    async getState(){
-        const responsePromise = getNext(this.stateResponse);
-        if(!this.stateRequested){
-            this.stateRequested = true;
-            const instance = await this.getIdleInstance({createNew: false, priority: true});
-            const state = await instance.getState();
-            this.stateResponse.dispatch(state);
-            this.stateRequested = false;
-            this.releaseIdleInstance(instance);
-        }
-        const [state] = await responsePromise;
-        return state;
     }
     async getIdleInstance({createNew, priority, specificInstance, executionId}){
         const index = this.availableInstances.findIndex(i => !specificInstance || i === specificInstance);
@@ -118,6 +118,7 @@ export class StateWorkerInstanceManager{
         let result;
         try{
             result = await executeAndThrowWhenCancelled(async () => {
+                await this.whenNoMoreCommandsPending();
                 const instance = await this.getIdleInstance({createNew: true, priority: false, executionId: execution.id});
                 if(execution.cancellationToken.cancelled){
                     this.releaseIdleInstance(instance);
@@ -125,7 +126,7 @@ export class StateWorkerInstanceManager{
                 }
                 const result = await instance.performExecution({methodName, args, executionId: execution.id});
                 this.releaseIdleInstance(instance);
-                this.removePendingExecution(execution);
+                this.finishExecution(execution);
                 return result;
             }, execution.cancellationToken);
         }catch(e){
@@ -147,7 +148,7 @@ export class StateWorkerInstanceManager{
                 //console.log(`all instances are idle. Now going to execute ${execution}`)
                 const instance = this.instances[0];
                 const result = await instance.performExecution({methodName, args, executionId: execution.id});
-                this.removePendingExecution(execution);
+                this.finishExecution(execution);
                 this.state = result.state;
                 for(let idleInstance of this.instances){
                     this.releaseIdleInstance(idleInstance);

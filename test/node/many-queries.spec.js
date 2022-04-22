@@ -22,8 +22,6 @@ describe('a state worker', () => {
             result5
         ] = await Promise.all([
             worker.initialize(2),
-            // TODO: make this work again by making sure that a query will not use an instance that was initialized
-            // while a previous command was still running
             worker.getDifferenceWith(1),
             worker.getDifferenceWith(2),
             worker.getDifferenceWith(3),
