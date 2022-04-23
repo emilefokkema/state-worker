@@ -1,5 +1,7 @@
 import { Event } from './events/event';
 import { merge } from './events/merge';
+import { fromPromise } from './events/from-promise';
+import { getNext } from './events/get-next'; 
 
 export class StateWorkerInstance {
 	constructor(processFactory, config, baseURI, id){
@@ -9,14 +11,22 @@ export class StateWorkerInstance {
 		this.process = undefined;
 		this.processCreated = new Event();
 		this.id = id;
-		this.onIdle = merge(this.processCreated, process => process.onIdle);
-		this.onIdleRequested = merge(this.processCreated, process => process.onIdleRequested);
+		const fromProcessCreatedPromise = fromPromise(this.getProcess());
+		this.onIdle = merge(fromProcessCreatedPromise, process => process.onIdle);
+		this.onIdleRequested = merge(fromProcessCreatedPromise, process => process.onIdleRequested);
 	}
 	terminate(){
 		if(this.process){
 			this.process.terminate();
 			this.process = undefined;
 		}
+	}
+	async getProcess(){
+		if(this.process){
+			return this.process;
+		}
+		const [result] = await getNext(this.processCreated);
+		return result;
 	}
 	createProcess(){
 		this.process = this.processFactory();
