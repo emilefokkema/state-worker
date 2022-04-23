@@ -99,9 +99,18 @@ describe('when we create a state worker', () => {
                 await expect(fifthQueryResultPromise).rejects.toThrow('execution was cancelled');
             });
 
-            it('should', async () => {
-                await new Promise(res => setTimeout(res, 200));
-                expect(true).toBe(true);
+            describe('and then the third and fourth execution request return', () => {
+
+                beforeAll(() => {
+                    console.log('and now the third and fourth return')
+                    thirdExecutionRequest.respond('a');
+                    fourthExecutionRequest.respond('b');
+                });
+
+                it('should', async () => {
+                    await new Promise(res => setTimeout(res, 700));
+                    expect(true).toBe(true);
+                });
             });
         });
     });

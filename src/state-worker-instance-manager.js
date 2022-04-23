@@ -61,24 +61,6 @@ export class StateWorkerInstanceManager{
         }
         await Promise.all(commands.map(c => this.whenExecutionHasFinished(c)));
     }
-    async cancelAllQueries(){
-        const queries = this.pendingExecutions.filter(e => !e.isCommand);
-        if(queries.length === 0){
-            return;
-        }
-        const queriesFinishedPromises = queries.map(q => this.whenExecutionHasFinished(q));
-        for(let query of queries){
-            query.cancellationToken.cancel();
-        }
-        await Promise.all(queriesFinishedPromises);
-    }
-    removePendingIdleInstanceRequest(request){
-        const index = this.pendingIdleInstanceRequests.indexOf(request);
-        if(index === -1){
-            return;
-        }
-        this.pendingIdleInstanceRequests.splice(index, 1);
-    }
     async getIdleInstance({createNew, specificInstance, executionId}, cancellationToken){
         const index = this.availableInstances.findIndex(i => !specificInstance || i === specificInstance);
         if(index > -1){
@@ -102,18 +84,22 @@ export class StateWorkerInstanceManager{
         [, instance] = await responsePromise;
         return instance;
     }
-    async whenAllInstancesIdle(){
+    async whenAllInstancesIdle(cancellationToken){
         if(this.availableInstances.length === this.instances.length){
             this.availableInstances.splice(0, this.availableInstances.length);
             return;
         }
-        const pendingIdleInstanceRequests = this.pendingIdleInstanceRequests.map(r => {const {specificInstance, ...rest} = r;return {specificInstance: !!specificInstance, ...rest};})
-        //console.log(`${this.availableInstances.length} idle instance(s)`)
-        //console.log('pending idle instance requests:', pendingIdleInstanceRequests)
-        //console.log('pending executions:', this.pendingExecutions.map(e => e.toString()))
-        //console.log(`${this.pendingInstanceCreations.length} instance creation(s) pending`)
-        
-        await new Promise(res => {})
+        const queries = this.pendingExecutions.filter(e => !e.isCommand);
+        const notYetIdleInstances = this.instances.filter(i => !this.availableInstances.includes(i));
+        const idleInstancePromises = [];
+        for(let notYetIdleInstance of notYetIdleInstances){
+            idleInstancePromises.push(this.getIdleInstance({specificInstance: notYetIdleInstance}, cancellationToken));
+        }
+        idleInstancePromises.push(...this.pendingInstanceCreations.map(c => this.whenInstanceCreationHasFinished(c)));
+        for(let query of queries){
+            query.cancellationToken.cancel();
+        }
+        await Promise.all(idleInstancePromises);
     }
     releaseIdleInstance(instance){
         let index = this.pendingIdleInstanceRequests.findIndex(r => r.specificInstance === instance);
@@ -142,7 +128,7 @@ export class StateWorkerInstanceManager{
         try{
             result = await executeAndThrowWhenCancelled(() => fn(execution), execution.cancellationToken);
         }catch(e){
-            throw new Error('execution was cancelled');
+            throw new Error(`execution was cancelled`);
         }finally{
             this.finishExecution(execution);
         }
@@ -186,10 +172,9 @@ export class StateWorkerInstanceManager{
     }
     async executeCommand(methodName, args){
         return await this.performExecution(methodName, args, true, async (execution) => {
-            //console.log(`before executing ${execution}, waiting for all instances to be idle...`)
-            await this.cancelAllQueries();
-            await this.whenAllInstancesIdle();
-            //console.log(`all instances are idle. Now going to execute ${execution}`)
+            console.log(`before executing ${execution}, waiting for all instances to be idle...`)
+            await this.whenAllInstancesIdle(execution.cancellationToken);
+            console.log(`all instances are idle. Now going to execute ${execution}`)
             const instance = this.instances[0];
             const result = await this.performExecutionOnInstance(execution, instance);
             this.state = result.state;
