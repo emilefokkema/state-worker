@@ -156,10 +156,14 @@ export class StateWorkerInstanceManager{
             return executionId === execution.id
         });
         const idleRequestsListener = async (_, sendResponse) => {
+            if(execution.cancellationToken.cancelled){
+                return;
+            }
             await this.getIdleInstance({specificInstance: instance, executionId: execution.id}, execution.cancellationToken);
             sendResponse();
         };
         idleRequests.addListener(idleRequestsListener);
+        getNext(execution.cancellationToken).then(() => idleRequests.removeListener(idleRequestsListener));
         const result = await instance.performExecution({
             methodName: execution.methodName,
             args: execution.args,
