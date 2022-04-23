@@ -14,6 +14,7 @@ export class StateWorkerInstanceManager{
         this.pendingExecutions = [];
         this.idleInstanceResponse = new Event();
         this.executionFinished = new Event();
+        this.instanceCreationFinished = new Event();
         this.pendingInstanceCreations = [];
         this.pendingIdleInstanceRequests = [];
         this.latestInstanceId = 0;
@@ -40,6 +41,12 @@ export class StateWorkerInstanceManager{
         }
         this.pendingExecutions.splice(index, 1);
         this.executionFinished.dispatch(execution);
+    }
+    async whenInstanceCreationHasFinished(instanceCreation){
+        if(!this.pendingInstanceCreations.includes(instanceCreation)){
+            return;
+        }
+        return await getNext(filter(this.instanceCreationFinished, (_instanceCreation) => _instanceCreation === instanceCreation));
     }
     async whenExecutionHasFinished(execution){
         if(!this.pendingExecutions.includes(execution)){
@@ -133,6 +140,7 @@ export class StateWorkerInstanceManager{
         this.pendingInstanceCreations.push(pendingInstanceCreation);
         await this.addNewInstance(this.state, pendingInstanceCreation.cancellationToken);
         const index = this.pendingInstanceCreations.indexOf(pendingInstanceCreation);
+        this.instanceCreationFinished.dispatch(pendingInstanceCreation);
         this.pendingInstanceCreations.splice(index, 1);
     }
     async performExecution(methodName, args, isCommand, fn){
