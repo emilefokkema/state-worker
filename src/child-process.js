@@ -51,7 +51,7 @@ export function start(importer, parentProcess){
         }
     });
 
-    parentProcess.onExecutionRequested.addListener(({methodName, args, executionId}, sendResponse) => {
+    parentProcess.onExecutionRequested.addListener(({methodName, args, id: executionId}, sendResponse) => {
         const query = queries[methodName];
         const command = commands[methodName];
         const method = command || query;

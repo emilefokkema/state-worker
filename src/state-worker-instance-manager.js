@@ -54,6 +54,17 @@ export class StateWorkerInstanceManager{
         }
         await Promise.all(commands.map(c => this.whenExecutionHasFinished(c)));
     }
+    async cancelAllQueries(){
+        const queries = this.pendingExecutions.filter(e => !e.isCommand);
+        if(queries.length === 0){
+            return;
+        }
+        const queriesFinishedPromises = queries.map(q => this.whenExecutionHasFinished(q));
+        for(let query of queries){
+            query.cancellationToken.cancel();
+        }
+        await Promise.all(queriesFinishedPromises);
+    }
     removePendingIdleInstanceRequest(request){
         const index = this.pendingIdleInstanceRequests.indexOf(request);
         if(index === -1){
@@ -75,7 +86,21 @@ export class StateWorkerInstanceManager{
         if(createNew && this.instances.length + this.pendingInstanceCreations.length < this.maxNumberOfProcesses){
             this.createNewInstance();
         }
-        const [, instance] = await responsePromise;
+        let instance;
+        const whenCancelled = getNext(cancellationToken);
+        await Promise.race([
+            whenCancelled,
+            (async () => {
+                [, instance] = await responsePromise;
+            })()
+        ]);
+        if(!instance && cancellationToken.cancelled){
+            const index = this.pendingIdleInstanceRequests.indexOf(idleInstanceRequest);
+            if(index > -1){
+                this.pendingIdleInstanceRequests.splice(index, 1);
+            }
+            return;
+        }
         return instance;
     }
     async whenAllInstancesIdle(){
@@ -88,6 +113,7 @@ export class StateWorkerInstanceManager{
         //console.log('pending idle instance requests:', pendingIdleInstanceRequests)
         //console.log('pending executions:', this.pendingExecutions.map(e => e.toString()))
         //console.log(`${this.pendingInstanceCreations.length} instance creation(s) pending`)
+        
         await new Promise(res => {})
     }
     releaseIdleInstance(instance){
@@ -137,7 +163,7 @@ export class StateWorkerInstanceManager{
         const result = await instance.performExecution({
             methodName: execution.methodName,
             args: execution.args,
-            executionId: execution.id});
+            id: execution.id});
         idleRequests.removeListener(idleRequestsListener);
         return result;
     }
@@ -157,6 +183,7 @@ export class StateWorkerInstanceManager{
     async executeCommand(methodName, args){
         return await this.performExecution(methodName, args, true, async (execution) => {
             //console.log(`before executing ${execution}, waiting for all instances to be idle...`)
+            await this.cancelAllQueries();
             await this.whenAllInstancesIdle();
             //console.log(`all instances are idle. Now going to execute ${execution}`)
             const instance = this.instances[0];

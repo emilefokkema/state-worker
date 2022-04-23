@@ -41,7 +41,7 @@ describe('when we create a state worker', () => {
             expect(firstExecutionRequest.content).toEqual({
                 methodName: queryMethodName,
                 args: [1],
-                executionId: 0
+                id: 0
             })
         });
 
@@ -73,7 +73,7 @@ describe('when we create a state worker', () => {
                     expect(secondExecutionRequest.content).toEqual({
                         methodName: queryMethodName,
                         args: [2],
-                        executionId: 1
+                        id: 1
                     })
                 });
 
@@ -128,7 +128,7 @@ describe('when we create a state worker', () => {
                                 expect(thirdExecutionRequest.content).toEqual({
                                     methodName: queryMethodName,
                                     args: [3],
-                                    executionId: 2
+                                    id: 2
                                 })
                             });
 
@@ -148,7 +148,7 @@ describe('when we create a state worker', () => {
                                     expect(fourthExecutionRequest.content).toEqual({
                                         methodName: queryMethodName,
                                         args: [4],
-                                        executionId: 3
+                                        id: 3
                                     })
                                 });
 

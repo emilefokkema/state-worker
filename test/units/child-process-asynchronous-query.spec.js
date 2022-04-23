@@ -29,7 +29,7 @@ describe('given a child process', () => {
 
         beforeAll(() => {
             childProcessIdlePromise = getNext(parentProcess.idle);
-            asyncQueryResultPromise = parentProcess.execute({methodName: 'getSumAsync', args: [1], executionId: 0});
+            asyncQueryResultPromise = parentProcess.execute({methodName: 'getSumAsync', args: [1], id: 0});
         });
 
         it('the child process should have notified of being idle', async () => {
@@ -66,7 +66,7 @@ describe('given a child process', () => {
 
         beforeAll(async () => {
             const childProcessIdlePromise = getNext(parentProcess.idle);
-            asyncQueryResultPromise = parentProcess.execute({methodName: 'getSumAsync', args: [2], executionId: 1});
+            asyncQueryResultPromise = parentProcess.execute({methodName: 'getSumAsync', args: [2], id: 1});
             await childProcessIdlePromise;
         });
 

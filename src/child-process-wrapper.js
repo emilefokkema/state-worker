@@ -21,7 +21,7 @@ class ChildProcessWrapper{
         return getNext(this.startedMessage);
     }
     performExecution(execution){
-        return this.requestTarget.getResponse({type: 'execution', methodName: execution.methodName, args: execution.args});
+        return this.requestTarget.getResponse({type: 'execution', methodName: execution.methodName, args: execution.args, id: execution.id});
     }
     initialize(config, baseURI, state){
         return this.requestTarget.getResponse({type: 'initialize', config, baseURI, state});

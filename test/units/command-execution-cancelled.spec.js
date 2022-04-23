@@ -31,7 +31,7 @@ describe('when we create a state worker', () => {
             expect(firstCommandExecutionRequest.content).toEqual({
                 methodName: commandMethodName,
                 args: [1],
-                executionId: 0
+                id: 0
             });
         });
 

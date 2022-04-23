@@ -56,7 +56,7 @@ describe('a child process', () => {
             let commandExecutionResponsePromise;
 
             beforeAll(() => {
-                commandExecutionResponsePromise = parentProcess.execute({methodName: 'add', args: [1], executionId: 0});
+                commandExecutionResponsePromise = parentProcess.execute({methodName: 'add', args: [1], id: 0});
             });
 
             it('should respond correctly', async () => {
@@ -73,7 +73,7 @@ describe('a child process', () => {
             let commandExecutionResponsePromise;
 
             beforeAll(() => {
-                commandExecutionResponsePromise = parentProcess.execute({methodName: 'addAndThrow', args: [1], executionId: 0});
+                commandExecutionResponsePromise = parentProcess.execute({methodName: 'addAndThrow', args: [1], id: 0});
             });
 
             it('should respond correctly', async () => {

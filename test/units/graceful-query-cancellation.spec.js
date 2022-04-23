@@ -60,17 +60,17 @@ describe('when we create a state worker', () => {
             expect(secondExecutionRequest.content).toEqual({
                 methodName: asyncQueryMethodName,
                 args: [2],
-                executionId: 1
+                id: 1
             });
             expect(thirdExecutionRequest.content).toEqual({
                 methodName: queryMethodName,
                 args: [3],
-                executionId: 2
+                id: 2
             });
             expect(fourthExecutionRequest.content).toEqual({
                 methodName: queryMethodName,
                 args: [4],
-                executionId: 3
+                id: 3
             });
             expect(firstExecutionRequestChildProcess).toBe(secondExecutionRequestChildProcess);
             expect(firstExecutionRequestChildProcess).toBe(fourthExecutionRequestChildProcess);
@@ -90,6 +90,13 @@ describe('when we create a state worker', () => {
                 firstCommandResultPromise = stateWorker[commandMethodName]('a');
                 secondCommandResultPromise = stateWorker[commandMethodName]('b');
                 sixthQueryResultPromise = stateWorker[queryMethodName](6);
+            });
+
+            it('the four remaining previous queries should all have rejected', async () => {
+                await expect(secondQueryResultPromise).rejects.toThrow('execution was cancelled')
+                await expect(thirdQueryResultPromise).rejects.toThrow('execution was cancelled');
+                await expect(fourthQueryResultPromise).rejects.toThrow('execution was cancelled');
+                await expect(fifthQueryResultPromise).rejects.toThrow('execution was cancelled');
             });
 
             it('should', async () => {
