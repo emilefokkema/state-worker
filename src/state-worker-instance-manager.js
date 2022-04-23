@@ -89,25 +89,17 @@ export class StateWorkerInstanceManager{
         const idleInstanceRequest = {specificInstance, executionId};
         const responsePromise = getNext(filter(this.idleInstanceResponse, (_request) => _request === idleInstanceRequest));
         this.pendingIdleInstanceRequests.push(idleInstanceRequest);
-        
         if(createNew && this.instances.length + this.pendingInstanceCreations.length < this.maxNumberOfProcesses){
             this.createNewInstance();
         }
         let instance;
-        const whenCancelled = getNext(cancellationToken);
-        await Promise.race([
-            whenCancelled,
-            (async () => {
-                [, instance] = await responsePromise;
-            })()
-        ]);
-        if(!instance && cancellationToken.cancelled){
+        getNext(cancellationToken).then(() => {
             const index = this.pendingIdleInstanceRequests.indexOf(idleInstanceRequest);
             if(index > -1){
                 this.pendingIdleInstanceRequests.splice(index, 1);
             }
-            return;
-        }
+        });
+        [, instance] = await responsePromise;
         return instance;
     }
     async whenAllInstancesIdle(){
