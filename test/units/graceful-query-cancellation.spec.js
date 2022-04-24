@@ -99,12 +99,26 @@ describe('when we create a state worker', () => {
                 await expect(fifthQueryResultPromise).rejects.toThrow('execution was cancelled');
             });
 
-            describe('and then the third and fourth execution request return', () => {
+            describe('and then the third and fourth execution request return and the third child process finishes intializing', () => {
+                let firstCommandExecutionRequest;
+                let firstCommandChildProcess;
 
-                beforeAll(() => {
-                    console.log('and now the third and fourth return')
+                beforeAll(async () => {
                     thirdExecutionRequest.respond('a');
                     fourthExecutionRequest.respond('b');
+                    thirdChildProcess.started.dispatch();
+                    const initializationRequest = await thirdChildProcess.getInitializationRequest();
+                    initializationRequest.respond(initializationResponse);
+                    ({childProcess: firstCommandChildProcess, executionRequest: firstCommandExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
+                });
+
+                it('should have asked the first child process to execute the first command', () => {
+                    expect(firstCommandExecutionRequest.content).toEqual({
+                        methodName: commandMethodName,
+                        args: ['a'],
+                        id: 5
+                    })
+                    expect(firstCommandChildProcess).toBe(firstExecutionRequestChildProcess);
                 });
 
                 it('should', async () => {

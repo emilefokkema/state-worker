@@ -4,6 +4,7 @@ import { Event } from './events/event';
 import { getNext } from './events/get-next';
 import { filter } from './events/filter';
 import { executeAndThrowWhenCancelled } from './execute-and-throw-when-cancelled';
+import { IdleInstanceRequest } from './idle-instance-request';
 
 export class StateWorkerInstanceManager{
     constructor(instanceFactory, maxNumberOfProcesses){
@@ -14,7 +15,6 @@ export class StateWorkerInstanceManager{
         this.pendingExecutions = [];
         this.idleInstanceResponse = new Event();
         this.executionFinished = new Event();
-        this.instanceCreationFinished = new Event();
         this.pendingInstanceCreations = [];
         this.pendingIdleInstanceRequests = [];
         this.latestInstanceId = 0;
@@ -42,12 +42,6 @@ export class StateWorkerInstanceManager{
         this.pendingExecutions.splice(index, 1);
         this.executionFinished.dispatch(execution);
     }
-    async whenInstanceCreationHasFinished(instanceCreation){
-        if(!this.pendingInstanceCreations.includes(instanceCreation)){
-            return;
-        }
-        return await getNext(filter(this.instanceCreationFinished, (_instanceCreation) => _instanceCreation === instanceCreation));
-    }
     async whenExecutionHasFinished(execution){
         if(!this.pendingExecutions.includes(execution)){
             return;
@@ -68,7 +62,7 @@ export class StateWorkerInstanceManager{
             return instance;
         }
         
-        const idleInstanceRequest = {specificInstance, executionId};
+        const idleInstanceRequest = new IdleInstanceRequest(specificInstance, executionId);
         const responsePromise = getNext(filter(this.idleInstanceResponse, (_request) => _request === idleInstanceRequest));
         this.pendingIdleInstanceRequests.push(idleInstanceRequest);
         if(createNew && this.instances.length + this.pendingInstanceCreations.length < this.maxNumberOfProcesses){
@@ -95,7 +89,7 @@ export class StateWorkerInstanceManager{
         for(let notYetIdleInstance of notYetIdleInstances){
             idleInstancePromises.push(this.getIdleInstance({specificInstance: notYetIdleInstance}, cancellationToken));
         }
-        idleInstancePromises.push(...this.pendingInstanceCreations.map(c => this.whenInstanceCreationHasFinished(c)));
+        idleInstancePromises.push(...this.pendingInstanceCreations.map(c => this.getIdleInstance({}, cancellationToken)));
         for(let query of queries){
             query.cancellationToken.cancel();
         }
@@ -118,7 +112,6 @@ export class StateWorkerInstanceManager{
         this.pendingInstanceCreations.push(pendingInstanceCreation);
         await this.addNewInstance(this.state, pendingInstanceCreation.cancellationToken);
         const index = this.pendingInstanceCreations.indexOf(pendingInstanceCreation);
-        this.instanceCreationFinished.dispatch(pendingInstanceCreation);
         this.pendingInstanceCreations.splice(index, 1);
     }
     async performExecution(methodName, args, isCommand, fn){
@@ -174,7 +167,7 @@ export class StateWorkerInstanceManager{
         return await this.performExecution(methodName, args, true, async (execution) => {
             console.log(`before executing ${execution}, waiting for all instances to be idle...`)
             await this.whenAllInstancesIdle(execution.cancellationToken);
-            console.log(`all instances are idle. Now going to execute ${execution}`)
+            console.log(`all ${this.instances.length} instances are idle. Now going to execute ${execution}`)
             const instance = this.instances[0];
             const result = await this.performExecutionOnInstance(execution, instance);
             this.state = result.state;
