@@ -121,9 +121,54 @@ describe('when we create a state worker', () => {
                     expect(firstCommandChildProcess).toBe(firstExecutionRequestChildProcess);
                 });
 
-                it('should', async () => {
-                    await new Promise(res => setTimeout(res, 700));
-                    expect(true).toBe(true);
+                describe('and then the command returns', () => {
+                    const firstState = 100;
+                    let secondChildProcessSetStateRequest;
+                    let thirdChildProcessSetStateRequest;
+
+                    beforeAll(async () => {
+                        firstCommandExecutionRequest.respond({state: firstState});
+                        secondChildProcessSetStateRequest = await secondChildProcess.getSetStateRequest();
+                        thirdChildProcessSetStateRequest = await thirdChildProcess.getSetStateRequest();
+                    });
+
+                    it('should have asked the second and third child processes to set the new state', () => {
+                        expect(secondChildProcessSetStateRequest.content).toEqual(firstState);
+                        expect(thirdChildProcessSetStateRequest.content).toEqual(firstState);
+                    });
+
+                    describe('and then the second and third child processes finish setting the state', () => {
+                        let secondCommandExecutionRequest;
+                        let secondCommandChildProcess;
+
+                        beforeAll(async () => {
+                            secondChildProcessSetStateRequest.respond();
+                            thirdChildProcessSetStateRequest.respond();
+                            ({childProcess: secondCommandChildProcess, executionRequest: secondCommandExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
+                        });
+
+                        it('should have asked the first child process to execute the second command', () => {
+                            expect(secondCommandExecutionRequest.content).toEqual({
+                                methodName: commandMethodName,
+                                args: ['b'],
+                                id: 6
+                            })
+                            expect(secondCommandChildProcess).toBe(firstExecutionRequestChildProcess);
+                        });
+
+                        describe('and then the second command returns', () => {
+                            let secondState = 101;
+
+                            beforeAll(() => {
+                                secondCommandExecutionRequest.respond({state: secondState});
+                            });
+
+                            it('should', async () => {
+                                await new Promise(res => setTimeout(res, 700));
+                                expect(true).toBe(true);
+                            });
+                        });
+                    });
                 });
             });
         });

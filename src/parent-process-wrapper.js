@@ -7,7 +7,7 @@ class ParentProcessWrapper{
         this.parentProcess = parentProcess;
         const requestSource = new RequestSource(parentProcess);
         this.onExecutionRequested = filter(requestSource, ({type}) => type === 'execution');
-        this.onStateRequested = filter(requestSource, ({type}) => type === 'state');
+        this.onSetStateRequested = filter(requestSource, ({type}) => type === 'setState');
         this.onInitializationRequested = filter(requestSource, ({type}) => type === 'initialize');
         this.requestTarget = new RequestTarget(parentProcess);
     }

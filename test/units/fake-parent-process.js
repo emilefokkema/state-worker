@@ -8,9 +8,13 @@ export class FakeParentProcess{
         this.idleRequest = new RequestAndResponse();
         this.onExecutionRequested = new RequestAndResponse();
         this.onInitializationRequested = new RequestAndResponse();
+        this.onSetStateRequested = new RequestAndResponse();
     }
     initialize(request){
         return this.onInitializationRequested.getResponse(request);
+    }
+    setState(state){
+        return this.onSetStateRequested.getResponse(state);
     }
     execute(request){
         return this.onExecutionRequested.getResponse(request);

@@ -20,6 +20,9 @@ class ChildProcessWrapper{
     whenStarted(){
         return getNext(this.startedMessage);
     }
+    setState(state){
+        return this.requestTarget.getResponse({type: 'setState', state});
+    }
     performExecution(execution){
         return this.requestTarget.getResponse({type: 'execution', methodName: execution.methodName, args: execution.args, id: execution.id});
     }

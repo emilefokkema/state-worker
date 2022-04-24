@@ -110,6 +110,7 @@ export class StateWorkerInstanceManager{
     async createNewInstance(){
         const pendingInstanceCreation = new InstanceCreation();
         this.pendingInstanceCreations.push(pendingInstanceCreation);
+        await this.whenNoMoreCommandsPending();
         await this.addNewInstance(this.state, pendingInstanceCreation.cancellationToken);
         const index = this.pendingInstanceCreations.indexOf(pendingInstanceCreation);
         this.pendingInstanceCreations.splice(index, 1);
@@ -152,7 +153,6 @@ export class StateWorkerInstanceManager{
     }
     async executeQuery(methodName, args){
         return await this.performExecution(methodName, args, false, async (execution) => {
-            await this.whenNoMoreCommandsPending();
             const instance = await this.getIdleInstance({createNew: true, executionId: execution.id}, execution.cancellationToken);
             if(execution.cancellationToken.cancelled){
                 this.releaseIdleInstance(instance);
@@ -168,9 +168,11 @@ export class StateWorkerInstanceManager{
             console.log(`before executing ${execution}, waiting for all instances to be idle...`)
             await this.whenAllInstancesIdle(execution.cancellationToken);
             console.log(`all ${this.instances.length} instances are idle. Now going to execute ${execution}`)
-            const instance = this.instances[0];
-            const result = await this.performExecutionOnInstance(execution, instance);
+            const firstInstance = this.instances[0];
+            const result = await this.performExecutionOnInstance(execution, firstInstance);
             this.state = result.state;
+            const otherInstances = this.instances.filter(i => i !== firstInstance);
+            await Promise.all(otherInstances.map(otherInstance => otherInstance.setState(result.state)))
             for(let idleInstance of this.instances){
                 this.releaseIdleInstance(idleInstance);
             }

@@ -51,6 +51,11 @@ export function start(importer, parentProcess){
         }
     });
 
+    parentProcess.onSetStateRequested.addListener((_state, sendResponse) => {
+        state = _state;
+        sendResponse();
+    });
+
     parentProcess.onExecutionRequested.addListener(({methodName, args, id: executionId}, sendResponse) => {
         const query = queries[methodName];
         const command = commands[methodName];

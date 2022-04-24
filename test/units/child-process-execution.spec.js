@@ -64,8 +64,8 @@ describe('a child process', () => {
             });
 
             it('should respond to queries correctly', async () => {
-                expect(await parentProcess.execute({methodName: 'getSum', args: [1], executionId: 1})).toEqual({result: 2})
-                expect(await parentProcess.execute({methodName: 'getSum', args: [2], executionId: 2})).toEqual({result: 3})
+                expect(await parentProcess.execute({methodName: 'getSum', args: [1], id: 1})).toEqual({result: 2})
+                expect(await parentProcess.execute({methodName: 'getSum', args: [2], id: 2})).toEqual({result: 3})
             });
         });
 
@@ -73,11 +73,24 @@ describe('a child process', () => {
             let commandExecutionResponsePromise;
 
             beforeAll(() => {
-                commandExecutionResponsePromise = parentProcess.execute({methodName: 'addAndThrow', args: [1], id: 0});
+                commandExecutionResponsePromise = parentProcess.execute({methodName: 'addAndThrow', args: [1], id: 3});
             });
 
             it('should respond correctly', async () => {
                 expect(await commandExecutionResponsePromise).toEqual({error: new Error(failingCommandErrorMessage).toString(), state: 2})
+            });
+        });
+
+        describe('and then the state is changed', () => {
+            const newState = 4;
+
+            beforeAll(async () => {
+                await parentProcess.setState(newState);
+            });
+
+            it('should respond to queries correctly', async () => {
+                expect(await parentProcess.execute({methodName: 'getSum', args: [1], id: 1})).toEqual({result: 5})
+                expect(await parentProcess.execute({methodName: 'getSum', args: [2], id: 2})).toEqual({result: 6})
             });
         });
     });

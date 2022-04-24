@@ -32,8 +32,8 @@ export class StateWorkerInstance {
 		this.process = this.processFactory();
 		this.processCreated.dispatch(this.process);
 	}
-	getState(){
-		return this.process.getState();
+	setState(state){
+		return this.process.setState(state);
 	}
 	performExecution(execution){
 		return this.process.performExecution(execution);
