@@ -165,9 +165,7 @@ export class StateWorkerInstanceManager{
     }
     async executeCommand(methodName, args){
         return await this.performExecution(methodName, args, true, async (execution) => {
-            console.log(`before executing ${execution}, waiting for all instances to be idle...`)
             await this.whenAllInstancesIdle(execution.cancellationToken);
-            console.log(`all ${this.instances.length} instances are idle. Now going to execute ${execution}`)
             const firstInstance = this.instances[0];
             const result = await this.performExecutionOnInstance(execution, firstInstance);
             this.state = result.state;

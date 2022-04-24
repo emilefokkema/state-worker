@@ -82,14 +82,11 @@ describe('when we create a state worker', () => {
         });
 
         describe('and then two commands and a query are added', () => {
-            let firstCommandResultPromise;
-            let secondCommandResultPromise;
-            let sixthQueryResultPromise;
 
             beforeAll(() => {
-                firstCommandResultPromise = stateWorker[commandMethodName]('a');
-                secondCommandResultPromise = stateWorker[commandMethodName]('b');
-                sixthQueryResultPromise = stateWorker[queryMethodName](6);
+                stateWorker[commandMethodName]('a');
+                stateWorker[commandMethodName]('b');
+                stateWorker[queryMethodName](6);
             });
 
             it('the four remaining previous queries should all have rejected', async () => {
@@ -157,15 +154,38 @@ describe('when we create a state worker', () => {
                         });
 
                         describe('and then the second command returns', () => {
-                            let secondState = 101;
+                            const secondState = 101;
+                            let secondChildProcessSetSecondStateRequest;
+                            let thirdChildProcessSetSecondStateRequest;
 
-                            beforeAll(() => {
+                            beforeAll(async () => {
                                 secondCommandExecutionRequest.respond({state: secondState});
+                                secondChildProcessSetSecondStateRequest = await secondChildProcess.getSetStateRequest();
+                                thirdChildProcessSetSecondStateRequest = await thirdChildProcess.getSetStateRequest();
                             });
 
-                            it('should', async () => {
-                                await new Promise(res => setTimeout(res, 700));
-                                expect(true).toBe(true);
+                            it('should have asked the second and third child processes to set another new state', () => {
+                                expect(secondChildProcessSetSecondStateRequest.content).toEqual(secondState);
+                                expect(thirdChildProcessSetSecondStateRequest.content).toEqual(secondState);
+                            });
+
+                            describe('and then the second and third child processes finish setting the state again', () => {
+                                let lastQueryExecutionRequest;
+
+                                beforeAll(async () => {
+                                    secondChildProcessSetSecondStateRequest.respond();
+                                    thirdChildProcessSetSecondStateRequest.respond();
+                                    ({executionRequest: lastQueryExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
+                                });
+
+                                it('execution of the last query should have been requested', () => {
+                                    expect(lastQueryExecutionRequest.content).toEqual({
+                                        methodName: queryMethodName,
+                                        args: [6],
+                                        id: 7
+                                    })
+                                    expect(secondCommandChildProcess).toBe(firstExecutionRequestChildProcess);
+                                });
                             });
                         });
                     });
