@@ -1,3 +1,6 @@
+import { CancellationToken } from './cancellation-token';
+import { cancellable } from './cancellable';
+
 class PipedEventSource{
     constructor(eventSource, mapFn){
         this.eventSource = eventSource;
@@ -5,7 +8,10 @@ class PipedEventSource{
         this.listeners = [];
     }
     addListener(listener){
-        const record = {attached: true};
+        const record = {
+            attached: true,
+            cancellation: new CancellationToken()
+        };
         const mappedListener = this.mapFn.apply(record, [listener]);
         record.listener = listener;
         record.mappedListener = mappedListener;
@@ -20,6 +26,7 @@ class PipedEventSource{
         const [record] = this.listeners.splice(index, 1);
         this.eventSource.removeListener(record.mappedListener);
         record.attached = false;
+        record.cancellation.cancel();
     }
 }
 
