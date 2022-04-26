@@ -133,8 +133,7 @@ export class ExecutionManager{
     async createNewInstance(){
         const pendingInstanceCreation = new InstanceCreation();
         this.pendingInstanceCreations.push(pendingInstanceCreation);
-        await this.whenNoMoreCommandsPending();
-        await this.addNewInstance(this.state, pendingInstanceCreation.cancellationToken);
+        await this.addNewInstance(pendingInstanceCreation.cancellationToken);
         const index = this.pendingInstanceCreations.indexOf(pendingInstanceCreation);
         this.pendingInstanceCreations.splice(index, 1);
     }
@@ -210,12 +209,13 @@ export class ExecutionManager{
             return result;
         });
     }
-    async addNewInstance(state, cancellationToken){
+    async addNewInstance(cancellationToken){
         const instance = this.instanceFactory(this.latestInstanceId++);
         instance.onIdle.addListener(() => {
             this.releaseIdleInstance(instance);
         });
-        const methodCollection = await instance.initialize(state);
+        await this.whenNoMoreCommandsPending();
+        const methodCollection = await instance.initialize(this.state);
         if(cancellationToken && cancellationToken.cancelled){
             instance.terminate();
             return;
