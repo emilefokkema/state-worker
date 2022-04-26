@@ -9,8 +9,7 @@ class PipedEventSource{
     }
     addListener(listener){
         const record = {
-            attached: true,
-            cancellation: new CancellationToken()
+            cancellationToken: new CancellationToken()
         };
         const mappedListener = this.mapFn.apply(record, [listener]);
         record.listener = listener;
@@ -25,8 +24,7 @@ class PipedEventSource{
         }
         const [record] = this.listeners.splice(index, 1);
         this.eventSource.removeListener(record.mappedListener);
-        record.attached = false;
-        record.cancellation.cancel();
+        record.cancellationToken.cancel();
     }
 }
 
