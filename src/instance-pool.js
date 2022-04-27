@@ -21,7 +21,7 @@ export class InstancePool{
     idleCount(){
         return this.availableInstances.length;
     }
-    async getSpecificIdleInstance(instance, cancellationToken){
+    async whenInstanceIsIdle(instance, cancellationToken){
         const index = this.availableInstances.indexOf(instance);
         if(index > -1){
             this.availableInstances.splice(index, 1);
@@ -60,7 +60,7 @@ export class InstancePool{
     }
     async whenAllInstancesIdle(cancellationToken){
         const result = this.instances.slice();
-        await Promise.all(result.map(i => this.getSpecificIdleInstance(i, cancellationToken)));
+        await Promise.all(result.map(i => this.whenInstanceIsIdle(i, cancellationToken)));
         return result;
     }
     releaseIdleInstance(instance){

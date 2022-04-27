@@ -1,5 +1,3 @@
-import { getNext } from './get-next';
-
 class CancellableEventSource{
     constructor(eventSource){
         this.eventSource = eventSource;
@@ -7,9 +5,9 @@ class CancellableEventSource{
     addListener(listener, cancellationToken){
         this.eventSource.addListener(listener);
         if (cancellationToken) {
-            getNext(cancellationToken).then(() => {
+            cancellationToken.addListener(() => {
                 this.removeListener(listener);
-            })
+            });
         }
     }
     removeListener(listener){
