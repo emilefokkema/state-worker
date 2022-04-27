@@ -74,22 +74,19 @@ export class InstancePool{
             record = {instance, queue: new Queue()};
             this.instanceIdleRequests.push(record);
         }
-        record.queue.enqueue(request);
+        const queue = record.queue;
+        queue.enqueue(request);
         if(cancellationToken){
             cancellationToken.addListener(() => {
-                this.removeInstanceIdleRequest(instance, request);
+                const index = this.instanceIdleRequests.indexOf(record);
+                if(index === -1){
+                    return;
+                }
+                queue.remove(request);
+                if(queue.empty()){
+                    this.instanceIdleRequests.splice(index, 1);
+                }
             });
-        }
-    }
-    removeInstanceIdleRequest(instance, request){
-        const index = this.instanceIdleRequests.findIndex(record => record.instance === instance);
-        if(index === -1){
-            return;
-        }
-        const queue = this.instanceIdleRequests[index].queue;
-        queue.remove(request);
-        if(queue.empty()){
-            this.instanceIdleRequests.splice(index, 1);
         }
     }
     dequeueInstanceIdleRequest(instance){
