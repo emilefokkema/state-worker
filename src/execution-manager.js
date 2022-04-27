@@ -4,7 +4,8 @@ import { Event } from './events/event';
 import { getNext } from './events/get-next';
 import { filter } from './events/filter';
 import { executeAndThrowWhenCancelled } from './execute-and-throw-when-cancelled';
-import { InstancePool } from './instance-pool';
+//import { InstancePool } from './instance-pool';
+import { NewInstancePool as InstancePool } from './new-instance-pool';
 
 export class ExecutionManager{
     constructor(instanceFactory, maxNumberOfProcesses){
