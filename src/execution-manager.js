@@ -69,16 +69,9 @@ export class ExecutionManager{
         return instance;
     }
     async whenAllInstancesIdle(cancellationToken){
-        if(this.availableInstances.length === this.instances.length){
-            this.availableInstances.splice(0, this.availableInstances.length);
-            return;
-        }
-        const notYetIdleInstances = this.instances.filter(i => !this.availableInstances.includes(i));
-        const idleInstancePromises = [];
-        for(let notYetIdleInstance of notYetIdleInstances){
-            idleInstancePromises.push(this.getSpecificIdleInstance(notYetIdleInstance, cancellationToken));
-        }
-        await Promise.all(idleInstancePromises);
+        const result = this.instances.slice();
+        await Promise.all(result.map(i => this.getSpecificIdleInstance(i, cancellationToken)));
+        return result;
     }
     releaseIdleInstance(instance){
         let index = this.pendingIdleInstanceRequests.findIndex(r => r.specificInstance === instance);
@@ -131,15 +124,23 @@ export class ExecutionManager{
         }
     }
     async createNewInstance(){
-        const pendingInstanceCreation = new InstanceCreation();
+        const instance = this.instanceFactory(this.latestInstanceId++);
+        const pendingInstanceCreation = new InstanceCreation(instance);
         this.pendingInstanceCreations.push(pendingInstanceCreation);
-        await this.addNewInstance(pendingInstanceCreation.cancellationToken);
+        instance.onIdle.addListener(() => {
+            this.releaseIdleInstance(instance);
+        });
+        await this.whenNoMoreCommandsPending();
+        await instance.initialize(this.state);
+        if(pendingInstanceCreation.cancellationToken.cancelled){
+            instance.terminate();
+        }else{
+            this.instances.push(instance);
+            this.releaseIdleInstance(instance);
+        }
         const index = this.pendingInstanceCreations.indexOf(pendingInstanceCreation);
         this.pendingInstanceCreations.splice(index, 1);
     }
-    async getInstancesThatAreBeingCreated(cancellationToken){
-        return Promise.all(this.pendingInstanceCreations.map(c => this.getIdleInstance(cancellationToken)))
-    };
     async performExecution(methodName, args, isCommand, fn){
         const execution = new Execution(this.latestRequestId++, methodName, args, isCommand);
         this.pendingExecutions.push(execution);
@@ -194,32 +195,29 @@ export class ExecutionManager{
     async executeCommand(methodName, args){
         return await this.performExecution(methodName, args, true, async (execution) => {
             this.cancelAllQueries();
-            await Promise.all([
+            const initializedInstances = this.pendingInstanceCreations.map(c => c.instance);
+            const [existingInstances] = await Promise.all([
                 this.whenAllInstancesIdle(execution.cancellationToken),
-                this.getInstancesThatAreBeingCreated(execution.cancellationToken)
+                initializedInstances.map(i => this.getSpecificIdleInstance(i, execution.cancellationToken))
             ]);
-            const firstInstance = this.instances[0];
+            const instances = existingInstances.concat(initializedInstances);
+            const firstInstance = instances[0];
             const result = await this.performExecutionOnInstance(execution, firstInstance);
             this.state = result.state;
-            const otherInstances = this.instances.filter(i => i !== firstInstance);
+            const otherInstances = instances.filter(i => i !== firstInstance);
             await Promise.all(otherInstances.map(otherInstance => otherInstance.setState(result.state)))
-            for(let idleInstance of this.instances){
+            for(let idleInstance of instances){
                 this.releaseIdleInstance(idleInstance);
             }
             return result;
         });
     }
-    async addNewInstance(cancellationToken){
+    async addNewInstance(){
         const instance = this.instanceFactory(this.latestInstanceId++);
         instance.onIdle.addListener(() => {
             this.releaseIdleInstance(instance);
         });
-        await this.whenNoMoreCommandsPending();
-        const methodCollection = await instance.initialize(this.state);
-        if(cancellationToken && cancellationToken.cancelled){
-            instance.terminate();
-            return;
-        }
+        const methodCollection = await instance.initialize();
         this.instances.push(instance);
         this.releaseIdleInstance(instance);
         return methodCollection;
