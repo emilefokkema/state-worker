@@ -138,4 +138,35 @@ describe('a queue', () => {
             queue.dequeue()
         ]).toEqual([5, 6, 7]);
     })
+
+    it('should remove a subqueue', () => {
+        const queue = new Queue();
+        const subQueue1 = queue.enqueueQueue();
+        queue.enqueue(2);
+        const subQueue2 = queue.enqueueQueue();
+        queue.enqueue(4);
+        subQueue1.enqueue(1);
+        subQueue2.enqueue(3);
+        
+        expect([
+            queue.dequeue(),
+            queue.dequeue(),
+            queue.dequeue(),
+            queue.dequeue()
+        ]).toEqual([1, 2, 3, 4])
+        
+        queue.removeQueue(subQueue1);
+        
+        subQueue1.enqueue(1);
+        subQueue2.enqueue(2);
+        
+        expect(queue.dequeue()).toEqual(2);
+        
+        queue.removeQueue(subQueue2);
+        
+        subQueue2.enqueue(1);
+        queue.enqueue(2);
+        
+        expect(queue.dequeue()).toEqual(2);
+    });
 });

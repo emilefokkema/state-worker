@@ -3,6 +3,19 @@ class QueueItem{
         this.previousBack = null;
         this.nextFront = null;
     }
+    detach(){
+        const previousBack = this.previousBack;
+        const nextFront = this.nextFront;
+        this.previousBack = null;
+        this.nextFront = null;
+        if(previousBack){
+            previousBack.nextFront = nextFront;
+        }
+        if(nextFront){
+            nextFront.previousBack = previousBack;
+        }
+        return nextFront;
+    }
     append(item){
         const nextFront = this.nextFront;
         this.nextFront = item;
@@ -25,17 +38,13 @@ class QueueValue extends QueueItem{
         this.value = value;
     }
     dequeueInternal(){
-        const previousBack = this.previousBack;
-        const nextFront = this.nextFront;
-        this.previousBack = null;
-        this.nextFront = null;
-        if(previousBack){
-            previousBack.nextFront = nextFront;
+        return {front: this.detach(), value: this.value};
+    }
+    removeQueueInternal(queue){
+        if(this.nextFront){
+            this.nextFront.removeQueueInternal(queue);
         }
-        if(nextFront){
-            nextFront.previousBack = previousBack;
-        }
-        return {front: nextFront, value: this.value};
+        return this;
     }
     removeInternal(value){
         if(value !== this.value){
@@ -44,8 +53,7 @@ class QueueValue extends QueueItem{
             }
             return this;
         }
-        const { front } = this.dequeueInternal();
-        return front;
+        return this.detach();
     }
     toString(){
         return `[queue item with value ${this.value}]`
@@ -103,11 +111,30 @@ export class Queue extends QueueItem{
         }
         return value;
     }
+    removeQueueInternal(queue){
+        if(queue === this){
+            return this.detach();
+        }
+        if(this.front){
+            this.front = this.front.removeQueueInternal(queue);
+            if(this.front === null){
+                this.back = null;
+            }else{
+                this.back = this.front.findBack();
+            }
+        }
+        if(this.nextFront){
+            this.nextFront.removeQueueInternal(queue);
+        }
+    }
     removeInternal(value){
         this.remove(value);
         if(this.nextFront){
             this.nextFront.removeInternal(value);
         }
+    }
+    removeQueue(queue){
+        this.removeQueueInternal(queue);
     }
     remove(value){
         if(this.front === null){
