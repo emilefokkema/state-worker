@@ -13,11 +13,17 @@ class ChildProcessWrapper{
         this.requestTarget = new RequestTarget(childProcess);
         const requestSource = new RequestSource(childProcess);
         this.onIdleRequested = filter(requestSource, ({type}) => type === 'requestIdle');
+        this.hasStarted = false;
+        getNext(this.startedMessage).then(() => {this.hasStarted = true;});
     }
     terminate(){
         this.childProcess.terminate();
     }
-    whenStarted(){
+    async whenStarted(){
+        await new Promise(res => setTimeout(res, 0))
+        if(this.hasStarted){
+            return;
+        }
         return getNext(this.startedMessage);
     }
     setState(state){

@@ -7,11 +7,13 @@ import { executeAndThrowWhenCancelled } from './execute-and-throw-when-cancelled
 import { InstancePool } from './instance-pool';
 
 export class ExecutionManager{
-    constructor(instanceFactory, maxNumberOfProcesses){
+    constructor(instanceFactory, config, baseURI){
         this.instancePool = new InstancePool();
 
         this.instanceFactory = instanceFactory;
-        this.maxNumberOfProcesses = maxNumberOfProcesses;
+        this.baseURI = baseURI;
+        this.maxNumberOfProcesses = config.maxNumberOfProcesses;
+        this.config = config;
         this.pendingExecutions = [];  
         this.executionFinished = new Event();
         this.pendingInstanceCreations = [];
@@ -139,9 +141,14 @@ export class ExecutionManager{
             this.instancePool.releaseIdleInstance(instance);
         });
         await this.whenNoMoreCommandsPending(cancellationToken);
-        const methodCollection = await instance.initialize(this.state);
+        await instance.whenStarted();
+        const result = await instance.initialize(this.config, this.baseURI, this.state);
+        if(result.error){
+			instance.terminate();
+			throw new Error(result.error);
+		}
         this.instancePool.addInstance(instance);
-        return methodCollection;
+        return result.methodCollection;
     }
     async createNewInstance(){
         const instance = this.instanceFactory(this.latestInstanceId++);
@@ -154,7 +161,7 @@ export class ExecutionManager{
     initialize(){
         return this.initializeInstance(this.instanceFactory(this.latestInstanceId++));
     }
-    static create(instanceFactory, config){
-        return new ExecutionManager(instanceFactory, config.maxNumberOfProcesses);
+    static create(config, instanceFactory, baseURI){
+        return new ExecutionManager(instanceFactory, config, baseURI);
     }
 }

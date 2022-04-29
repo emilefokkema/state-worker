@@ -1,5 +1,4 @@
 import { CancellationToken } from './cancellation-token';
-import { cancellable } from './cancellable';
 
 class PipedEventSource{
     constructor(eventSource, mapFn){
