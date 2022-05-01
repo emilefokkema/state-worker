@@ -134,7 +134,7 @@ export class ExecutionManager{
     async initializeInstance(instance, cancellationToken){
         if(cancellationToken){
             cancellationToken.addListener(() => {
-                instance.terminate();
+                this.instancePool.terminateInstance(instance);
             });
         }
         instance.onIdle.addListener(() => {
@@ -144,10 +144,11 @@ export class ExecutionManager{
         await instance.whenStarted();
         const result = await instance.initialize(this.config, this.baseURI, this.state);
         if(result.error){
-			instance.terminate();
+            this.instancePool.terminateInstance(instance);
 			throw new Error(result.error);
 		}
-        this.instancePool.addInstance(instance);
+		this.instancePool.registerInstance(instance);
+		this.instancePool.releaseIdleInstance(instance);
         return result.methodCollection;
     }
     async createNewInstance(){
