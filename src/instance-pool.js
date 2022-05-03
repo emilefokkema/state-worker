@@ -1,166 +1,71 @@
 import { Queue } from './queue';
+import { RequestAndResponseQueue } from './request-and-response-queue';
 
-class RequestQueue{
-    constructor(){
-        this.queue = new Queue();
-    }
-    sendRequest(cancellationToken){
-        return new Promise((resolve) => {
-            const request = {resolve};
-            this.queue.enqueue(request);
-            if(cancellationToken){
-                cancellationToken.addListener(() => {
-                    this.queue.remove(request);
-                })
-            }
-        });
-    }
-    resolveRequest(response){
-        if(this.queue.empty()){
-            return false;
-        }
-        this.queue.dequeue().resolve(response);
-        return true;
-    }
-}
+
 class InstanceRecord{
-    constructor(instance){
+    constructor(instance, idleRequestQueue, idleResponseQueue){
         this.instance = instance;
-        this.idleRequestQueue = new RequestQueue();
-        this.idle = false;
+        this.idleRequestResponseQueue = new RequestAndResponseQueue(idleRequestQueue, idleResponseQueue);
+    }
+    get idle(){
+        return this.idleRequestResponseQueue.hasResponse();
     }
     terminate(){
         this.instance.terminate();
     }
-    async whenIdle(cancellationToken){
-        if(this.idle){
-            this.idle = false;
-            return;
-        }
-        await this.idleRequestQueue.sendRequest(cancellationToken);
+    whenIdle(cancellationToken){
+        return this.idleRequestResponseQueue.getResponse(cancellationToken);
     }
     setIdle(){
-        if(this.idleRequestQueue.resolveRequest()){
-            return;
-        }
-        this.idle = true;
+        this.idleRequestResponseQueue.addResponse(this.instance);
     }
 }
 
 export class InstancePool{
     constructor(){
         this.instanceRecords = [];
-        this.instances = [];
-        this.idleInstances = [];
-        this.idleInstanceRequests = new Queue();
-        this.idleInstanceRequestQueue = new RequestQueue();
-        this.instanceIdleRequests = [];
+        this.idleInstanceRequestQueue = new Queue();
+        this.idleInstanceResponseQueue = new Queue();
+        this.idleInstanceRequestResponseQueue = new RequestAndResponseQueue(this.idleInstanceRequestQueue, this.idleInstanceResponseQueue);
     }
     terminate(){
-        // for(let instanceRecord of this.instanceRecords){
-        //     instanceRecord.terminate();
-        // }
-        for(let instance of this.instances){
-            instance.terminate();
+        for(let instanceRecord of this.instanceRecords){
+            instanceRecord.terminate();
         }
     }
     terminateInstance(instance){
         instance.terminate();
-        let index = this.instances.indexOf(instance);
-        if(index > -1){
-            this.instances.splice(index, 1);
-        }
-        index = this.idleInstances.indexOf(instance);
-        if(index > -1){
-            this.idleInstances.splice(index, 1);
-        }
-        index = this.instanceRecords.findIndex(r => r.instance === instance);
+        let index = this.instanceRecords.findIndex(r => r.instance === instance);
         if(index > -1){
             this.instanceRecords.splice(index, 1);
         }
     }
     count(){
-        //return this.instanceRecords.length;
-        return this.instances.length;
+        return this.instanceRecords.length;
     }
     idleCount(){
-        //return this.instanceRecords.filter(r => r.idle).length;
-        return this.idleInstances.length;
+        return this.instanceRecords.filter(r => r.idle).length;
     }
-    async whenInstanceIsIdle(instance, cancellationToken){
-        const index = this.idleInstances.indexOf(instance);
-        if(index > -1){
-            this.idleInstances.splice(index, 1);
-            return;
-        }
-        await new Promise((resolve) => {
-            this.enqueueInstanceIdleRequest(instance, {resolve}, cancellationToken);
-        });
+    async whenInstanceIsIdle(instance, cancellationToken, descriptionFn){
+        const record = this.instanceRecords.find(r => r.instance === instance);
+        return record.whenIdle(cancellationToken, descriptionFn);
     }
     async getIdleInstance(cancellationToken){
-        if(this.idleInstances.length > 0){
-            return this.idleInstances.shift();
-        }
-        
-        return await this.idleInstanceRequestQueue.sendRequest(cancellationToken);
+        return await this.idleInstanceRequestResponseQueue.getResponse(cancellationToken);
     }
     async whenAllInstancesIdle(cancellationToken){
-        const result = this.instances.slice();
-        await Promise.all(result.map(i => this.whenInstanceIsIdle(i, cancellationToken)));
+        const records = this.instanceRecords.slice();
+        const result = records.map(r => r.instance);
+        await Promise.all(records.map(r => r.whenIdle(cancellationToken)));
         return result;
     }
     releaseIdleInstance(instance){
-        const idleRequest = this.dequeueInstanceIdleRequest(instance);
-        if(idleRequest){
-            idleRequest.resolve();
-            return;
-        }
-        if(this.idleInstanceRequestQueue.resolveRequest(instance)){
-            return;
-        }
-        this.idleInstances.push(instance);
+        const record = this.instanceRecords.find(r => r.instance === instance);
+        record.setIdle();
     }
     registerInstance(instance){
-        this.instanceRecords.push(new InstanceRecord(instance));
-        this.instances.push(instance);
-    }
-    addInstance(instance){
-        this.instanceRecords.push(new InstanceRecord(instance));
-        this.instances.push(instance);
-        this.releaseIdleInstance(instance);
-    }
-    
-    enqueueInstanceIdleRequest(instance, request, cancellationToken){
-        let record = this.instanceIdleRequests.find(r => r.instance === instance);
-        if(!record){
-            record = {instance, queue: new Queue()};
-            this.instanceIdleRequests.push(record);
-        }
-        const queue = record.queue;
-        queue.enqueue(request);
-        if(cancellationToken){
-            cancellationToken.addListener(() => {
-                const index = this.instanceIdleRequests.indexOf(record);
-                if(index === -1){
-                    return;
-                }
-                queue.remove(request);
-                if(queue.empty()){
-                    this.instanceIdleRequests.splice(index, 1);
-                }
-            });
-        }
-    }
-    dequeueInstanceIdleRequest(instance){
-        const index = this.instanceIdleRequests.findIndex(record => record.instance === instance);
-        if(index === -1){
-            return null;
-        }
-        const queue = this.instanceIdleRequests[index].queue;
-        const request = queue.dequeue();
-        if(queue.empty()){
-            this.instanceIdleRequests.splice(index, 1);
-        }
-        return request;
+        const idleRequestQueue = this.idleInstanceRequestQueue.useAsFallbackFor(new Queue());
+        const idleResponseQueue = this.idleInstanceResponseQueue.embedQueue();
+        this.instanceRecords.push(new InstanceRecord(instance, idleRequestQueue, idleResponseQueue));
     }
 }

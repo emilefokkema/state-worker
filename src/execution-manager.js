@@ -98,7 +98,7 @@ export class ExecutionManager{
     }
     async executeQuery(methodName, args){
         return await this.performExecution(methodName, args, false, async (execution) => {
-            if(this.instancePool.idleCount() === 0 && this.instancePool.count() + this.pendingInstanceCreations.length < this.maxNumberOfProcesses){
+            if(this.instancePool.idleCount() === 0 && this.instancePool.count() < this.maxNumberOfProcesses){
                 this.createNewInstance();
             }
             const instance = await this.instancePool.getIdleInstance(execution.cancellationToken);
@@ -114,12 +114,7 @@ export class ExecutionManager{
     async executeCommand(methodName, args){
         return await this.performExecution(methodName, args, true, async (execution) => {
             this.cancelAllQueries();
-            const initializedInstances = this.pendingInstanceCreations.map(c => c.instance);
-            const [existingInstances] = await Promise.all([
-                this.instancePool.whenAllInstancesIdle(execution.cancellationToken),
-                initializedInstances.map(i => this.instancePool.whenInstanceIsIdle(i, execution.cancellationToken))
-            ]);
-            const instances = existingInstances.concat(initializedInstances);
+            const instances = await this.instancePool.whenAllInstancesIdle(execution.cancellationToken);
             const firstInstance = instances[0];
             const result = await this.performExecutionOnInstance(execution, firstInstance);
             this.state = result.state;
@@ -132,6 +127,7 @@ export class ExecutionManager{
         });
     }
     async initializeInstance(instance, cancellationToken){
+        this.instancePool.registerInstance(instance);
         if(cancellationToken){
             cancellationToken.addListener(() => {
                 this.instancePool.terminateInstance(instance);
@@ -147,8 +143,9 @@ export class ExecutionManager{
             this.instancePool.terminateInstance(instance);
 			throw new Error(result.error);
 		}
-		this.instancePool.registerInstance(instance);
-		this.instancePool.releaseIdleInstance(instance);
+        if(!cancellationToken || !cancellationToken.cancelled){
+            this.instancePool.releaseIdleInstance(instance);
+        }
         return result.methodCollection;
     }
     async createNewInstance(){

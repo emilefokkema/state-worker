@@ -37,6 +37,13 @@ class QueueItem{
         }
         return visitor;
     }
+    toString(){
+        let result = this.selfToString();
+        if(!this.nextFront){
+            return result;
+        }
+        return `${result} --> ${this.nextFront.toString()}`
+    }
 }
 
 class QueueValue extends QueueItem{
@@ -46,6 +53,9 @@ class QueueValue extends QueueItem{
     }
     acceptSelf(visitor){
         return visitor.visitValue(this);
+    }
+    selfToString(){
+        return `{${this.value}}`;
     }
 }
 
@@ -122,6 +132,12 @@ export class Queue extends QueueItem{
         this.enqueueItem(item);
         return item;
     }
+    embedQueue(){
+        return new EmbeddedQueue(this);
+    }
+    useAsFallbackFor(other){
+        return new QueueWithFallback(other, this);
+    }
     enqueue(value){
         this.enqueueItem(new QueueValue(value))
     }
@@ -143,7 +159,11 @@ export class Queue extends QueueItem{
         this.removeItem(new FindQueue(queue));
     }
     remove(value){
-        this.removeItem(new FindValue(value))
+        return !!this.removeItem(new FindValue(value))
+    }
+    contains(value){
+        const {item} = this.findItem(new FindValue(value));
+        return !!item;
     }
     findItem(findItemVisitor){
         this.accept(findItemVisitor);
@@ -165,6 +185,13 @@ export class Queue extends QueueItem{
         const {item} = this.findItem(new FindAnyValue());
         return !item;
     }
+    peek(){
+        const {item} = this.findItem(new FindAnyValue());
+        if(!item){
+            return null;
+        }
+        return item.value;
+    }
     acceptSelf(visitor){
         visitor = visitor.visitQueue(this);
         if(!visitor){
@@ -178,5 +205,121 @@ export class Queue extends QueueItem{
             return this.front.accept(visitor);
         }
         return visitor;
+    }
+    selfToString(){
+        return `[${(this.front ? this.front.toString() : '')}]`
+    }
+}
+
+class QueueWithFallbackBack{
+    constructor(queueBack){
+        this.queueBack = queueBack;
+    }
+    enqueue(value){
+        this.queueBack.enqueue(value);
+    }
+    enqueueQueue(){
+        const subQueueBack = this.queueBack.enqueueQueue();
+        return new QueueWithFallbackBack(subQueueBack);
+    }
+    remove(value){
+        this.queueBack.remove(value);
+    }
+    removeQueue(queue){
+        this.queueBack.removeQueue(queue.queueBack);
+    }
+}
+
+class QueueWithFallback{
+    constructor(queue, fallback){
+        this.queue = queue;
+        this.queueBack = new QueueWithFallbackBack(this.queue);
+        this.fallback = fallback;
+    }
+    enqueueQueue(){
+        return this.queueBack.enqueueQueue();
+    }
+    remove(value){
+        this.queueBack.remove(value);
+    }
+    removeQueue(queue){
+        this.queueBack.removeQueue(queue);
+    }
+    enqueue(value){
+        this.queueBack.enqueue(value);
+    }
+    dequeue(){
+        if(this.queue.empty()){
+            return this.fallback.dequeue();
+        }
+        return this.queue.dequeue();
+    }
+    empty(){
+        return this.queue.empty() && this.fallback.empty();
+    }
+}
+
+class EmbeddedQueueBack{
+    constructor(queueBack, baseQueueBack){
+        this.queueBack = queueBack;
+        this.baseQueueBack = baseQueueBack;
+    }
+    enqueue(value){
+        this.baseQueueBack.enqueue(value);
+        this.queueBack.enqueue(value);
+    }
+    enqueueQueue(){
+        const baseSubQueue = this.baseQueueBack.enqueueQueue();
+        const subQueue = this.queueBack.enqueueQueue();
+        return new EmbeddedQueueBack(subQueue, baseSubQueue);
+    }
+    remove(value){
+        this.queueBack.remove(value);
+        this.baseQueueBack.remove(value);
+    }
+    removeQueue(queue){
+        this.queueBack.removeQueue(queue.queueBack);
+        this.baseQueueBack.removeQueue(queue.baseQueueBack);
+    }
+}
+
+class EmbeddedQueue {
+    constructor(baseQueue){
+        this.baseQueue = baseQueue;
+        this.queue = new Queue();
+        this.queueBack = new EmbeddedQueueBack(this.queue, this.baseQueue);
+    }
+    enqueueQueue(){
+        return this.queueBack.enqueueQueue();
+    }
+    remove(value){
+        this.queueBack.remove(value);
+    }
+    removeQueue(queue){
+        this.queueBack.removeQueue(queue);
+    }
+    enqueue(value){
+        this.queueBack.enqueue(value);
+    }
+    prune(){
+        while(!this.queue.empty() && !this.baseQueue.contains(this.queue.peek())){
+            this.queue.dequeue();
+        }
+    }
+    dequeue(){
+        this.prune();
+        if(this.queue.empty()){
+            return null;
+        }
+        const value = this.queue.dequeue();
+        this.baseQueue.remove(value);
+        return value;
+    }
+    empty(){
+        this.prune();
+        return this.queue.empty();
+    }
+    toString(){
+        return `base: ${this.baseQueue.toString()}\r\nqueue: ${this.queue.toString()}`
     }
 }
