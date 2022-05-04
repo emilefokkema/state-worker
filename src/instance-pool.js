@@ -1,5 +1,6 @@
 import { Queue } from './queue';
 import { RequestAndResponseQueue } from './request-and-response-queue';
+import { pipe } from './events/pipe';
 
 class IdleRequestQueue{
     constructor(requestAndResponseQueue){
@@ -22,14 +23,25 @@ class InstanceRecord{
         this.idleRequestResponseQueue = new RequestAndResponseQueue(idleRequestQueue, idleResponseQueue);
         this.idleRequestQueue = new IdleRequestQueue(this.idleRequestResponseQueue);
         instance.onIdle.addListener(() => {
+            if(!this.idleAllowed){
+                return;
+            }
             this.setIdle();
+        });
+        this.idleAllowed = true;
+        this.onIdleRequested = pipe(instance.onIdleRequested, listener => ({executionId}, sendResponse) => {
+            if(!this.idleAllowed){
+                sendResponse();
+                return;
+            }
+            listener({executionId}, sendResponse);
         });
     }
     get idle(){
         return this.idleRequestResponseQueue.hasResponse();
     }
-    get onIdleRequested(){
-        return this.instance.onIdleRequested;
+    allowIdle(value){
+        this.idleAllowed = value;
     }
     performExecution(execution){
         return this.instance.performExecution(execution);

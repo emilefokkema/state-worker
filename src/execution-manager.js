@@ -121,7 +121,9 @@ export class ExecutionManager{
             this.cancelAllQueries();
             const instances = await this.instancePool.whenAllInstancesIdle(execution.cancellationToken);
             const firstInstance = instances[0];
+            firstInstance.allowIdle(false);
             const result = await this.performExecutionOnInstance(execution, firstInstance);
+            firstInstance.allowIdle(true);
             this.state = result.state;
             const otherInstances = instances.filter(i => i !== firstInstance);
             await Promise.all(otherInstances.map(otherInstance => otherInstance.setState(result.state)))
