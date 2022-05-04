@@ -1,7 +1,7 @@
 import { StateWorkerLifeCycle } from './state-worker-life-cycle';
 import { FakeChildProcessFactory } from './fake-child-process-factory';
 
-xdescribe('when we create a state worker', () => {
+describe('when we create a state worker', () => {
     const asyncQueryMethodName = 'getThingsAsync';
     const baseUri = 'http://base.uri';
     const config = {

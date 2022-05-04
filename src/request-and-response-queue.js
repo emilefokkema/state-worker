@@ -1,10 +1,14 @@
-export class RequestAndResponseQueue{
+class RequestQueueBack{
     constructor(requestQueue, responseQueue){
         this.requestQueue = requestQueue;
         this.responseQueue = responseQueue;
     }
-    hasRequest(){
-        return !this.requestQueue.empty();
+    enqueueRequestQueue(){
+        const requestSubQueue = this.requestQueue.enqueueQueue();
+        return new RequestQueueBack(requestSubQueue, this.responseQueue);
+    }
+    removeRequestQueue(queue){
+        this.requestQueue.removeQueue(queue.requestQueue);
     }
     hasResponse(){
         return !this.responseQueue.empty();
@@ -22,6 +26,26 @@ export class RequestAndResponseQueue{
                 })
             }
         });
+    }
+}
+
+export class RequestAndResponseQueue{
+    constructor(requestQueue, responseQueue){
+        this.requestQueue = requestQueue;
+        this.responseQueue = responseQueue;
+        this.requestQueueBack = new RequestQueueBack(this.requestQueue, this.responseQueue);
+    }
+    enqueueRequestQueue(){
+        return this.requestQueueBack.enqueueRequestQueue();
+    }
+    removeRequestQueue(queue){
+        this.requestQueueBack.removeRequestQueue(queue);
+    }
+    hasResponse(){
+        return this.requestQueueBack.hasResponse();
+    }
+    getResponse(cancellationToken){
+        return this.requestQueueBack.getResponse(cancellationToken);
     }
     addResponse(response){
         if(!this.requestQueue.empty()){

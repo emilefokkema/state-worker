@@ -1,11 +1,26 @@
 import { Queue } from './queue';
 import { RequestAndResponseQueue } from './request-and-response-queue';
 
-
+class IdleRequestQueue{
+    constructor(requestAndResponseQueue){
+        this.requestAndResponseQueue = requestAndResponseQueue;
+    }
+    whenIdle(cancellationToken){
+        return this.requestAndResponseQueue.getResponse(cancellationToken);
+    }
+    enqueueIdleRequestQueue(){
+        const subRequestAndResponseQueue = this.requestAndResponseQueue.enqueueRequestQueue();
+        return new IdleRequestQueue(subRequestAndResponseQueue);
+    }
+    removeIdleRequestQueue(queue){
+        this.requestAndResponseQueue.removeRequestQueue(queue.requestAndResponseQueue);
+    }
+}
 class InstanceRecord{
     constructor(instance, idleRequestQueue, idleResponseQueue){
         this.instance = instance;
         this.idleRequestResponseQueue = new RequestAndResponseQueue(idleRequestQueue, idleResponseQueue);
+        this.idleRequestQueue = new IdleRequestQueue(this.idleRequestResponseQueue);
         instance.onIdle.addListener(() => {
             this.setIdle();
         });
@@ -31,8 +46,14 @@ class InstanceRecord{
     terminate(){
         this.instance.terminate();
     }
+    enqueueIdleRequestQueue(){
+        return this.idleRequestQueue.enqueueIdleRequestQueue();
+    }
+    removeIdleRequestQueue(queue){
+        this.idleRequestQueue.removeIdleRequestQueue(queue);
+    }
     whenIdle(cancellationToken){
-        return this.idleRequestResponseQueue.getResponse(cancellationToken);
+        return this.idleRequestQueue.whenIdle(cancellationToken);
     }
     setIdle(){
         this.idleRequestResponseQueue.addResponse(this);

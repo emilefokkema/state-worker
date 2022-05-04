@@ -77,6 +77,7 @@ export class ExecutionManager{
         return result.result;
     }
     async performExecutionOnInstance(execution, instance){
+        const requestQueue = instance.enqueueIdleRequestQueue();
         const idleRequests = filter(instance.onIdleRequested, ({executionId}) => {
             return executionId === execution.id
         });
@@ -84,16 +85,20 @@ export class ExecutionManager{
             if(execution.cancellationToken.cancelled){
                 return;
             }
-            await instance.whenIdle(execution.cancellationToken);
+            await requestQueue.whenIdle(execution.cancellationToken);
             sendResponse();
         };
         idleRequests.addListener(idleRequestsListener);
-        getNext(execution.cancellationToken).then(() => idleRequests.removeListener(idleRequestsListener));
+        getNext(execution.cancellationToken).then(() => {
+            idleRequests.removeListener(idleRequestsListener);
+            instance.removeIdleRequestQueue(requestQueue);
+        });
         const result = await instance.performExecution({
             methodName: execution.methodName,
             args: execution.args,
             id: execution.id});
         idleRequests.removeListener(idleRequestsListener);
+        instance.removeIdleRequestQueue(requestQueue);
         return result;
     }
     async executeQuery(methodName, args){
