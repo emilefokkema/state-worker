@@ -13,6 +13,7 @@ export class ExecutionManager{
         this.instanceFactory = instanceFactory;
         this.baseURI = baseURI;
         this.maxNumberOfProcesses = config.maxNumberOfProcesses;
+        this.gracefulQueryCancellation = config.gracefulQueryCancellation === undefined || !config.gracefulQueryCancellation;
         this.config = config;
         this.pendingExecutions = [];  
         this.executionFinished = new Event();
