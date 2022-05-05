@@ -117,15 +117,18 @@ export class ExecutionManager{
             return result;
         });
     }
+    getInstancesForCommandExecution(cancellationToken){
+        if(this.gracefulQueryCancellation){
+            return this.instancePool.whenAllInstancesIdle(cancellationToken);
+        }
+        return this.instancePool.getAtLeastOneIdleInstanceAndTerminateNonIdleOnes(cancellationToken);
+    }
     async executeCommand(methodName, args){
         return await this.performExecution(methodName, args, true, async (execution) => {
             this.cancelAllQueries();
-            if(!this.gracefulQueryCancellation){
-                console.log(`getting at least one idle instance to execute ${execution}...`)
-                const idleInstances = await this.instancePool.getAtLeastOneIdleInstanceAndTerminateNonIdleOnes(execution.cancellationToken);
-                return {};
-            }
-            const instances = await this.instancePool.whenAllInstancesIdle(execution.cancellationToken);
+            console.log(`getting instances on which to execute ${execution}...`)
+            const instances = await this.getInstancesForCommandExecution(execution.cancellationToken);
+            console.log(`received ${instances.length} instance(s) on which to execute ${execution}`)
             const firstInstance = instances[0];
             firstInstance.allowIdle(false);
             const result = await this.performExecutionOnInstance(execution, firstInstance);

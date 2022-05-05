@@ -96,6 +96,28 @@ describe('when we create a state worker', () => {
                 await expect(fourthQueryResultPromise).rejects.toThrow('execution was cancelled');
                 await expect(fifthQueryResultPromise).rejects.toThrow('execution was cancelled');
             });
+
+            describe('and then the first child process becomes idle', () => {
+                let firstCommandExecutionRequest;
+
+                beforeAll(async () => {
+                    firstExecutionRequestChildProcess.onIdle.dispatch();
+                    ({executionRequest: firstCommandExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
+                });
+
+                it('the other two child processes should have been terminated', async () => {
+                    await secondChildProcess.whenTerminated();
+                    await thirdChildProcess.whenTerminated();
+                });
+
+                it('execution of the first command should have started', () => {
+                    expect(firstCommandExecutionRequest.content).toEqual({
+                        methodName: commandMethodName,
+                        args: ['a'],
+                        id: 5
+                    });
+                });
+            });
         });
     });
 });
