@@ -20,6 +20,7 @@ class IdleRequestQueue{
 class InstanceRecord{
     constructor(instance, idleRequestQueue, idleResponseQueue){
         this.instance = instance;
+        this.terminated = false;
         this.idleRequestResponseQueue = new RequestAndResponseQueue(idleRequestQueue, idleResponseQueue);
         this.idleRequestQueue = new IdleRequestQueue(this.idleRequestResponseQueue);
         instance.onIdle.addListener(() => {
@@ -57,6 +58,7 @@ class InstanceRecord{
     }
     terminate(){
         this.instance.terminate();
+        this.terminated = true;
     }
     enqueueIdleRequestQueue(){
         return this.idleRequestQueue.enqueueIdleRequestQueue();
@@ -65,9 +67,15 @@ class InstanceRecord{
         this.idleRequestQueue.removeIdleRequestQueue(queue);
     }
     whenIdle(cancellationToken){
+        if(this.terminated){
+            return new Promise(() => {});
+        }
         return this.idleRequestQueue.whenIdle(cancellationToken);
     }
     setIdle(){
+        if(this.terminated){
+            return;
+        }
         this.idleRequestResponseQueue.addResponse(this);
     }
 }
@@ -100,8 +108,7 @@ export class InstancePool{
     async getIdleInstance(cancellationToken){
         return await this.idleInstanceRequestResponseQueue.getResponse(cancellationToken);
     }
-    async getAtLeastOneIdleInstance(cancellationToken){
-        
+    async getAtLeastOneIdleInstanceAndTerminateNonIdleOnes(cancellationToken){
     }
     async whenAllInstancesIdle(cancellationToken){
         const records = this.instanceRecords.slice();

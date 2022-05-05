@@ -122,7 +122,7 @@ export class ExecutionManager{
             this.cancelAllQueries();
             if(!this.gracefulQueryCancellation){
                 console.log(`getting at least one idle instance to execute ${execution}...`)
-                const idleInstances = await this.instancePool.getAtLeastOneIdleInstance(execution.cancellationToken);
+                const idleInstances = await this.instancePool.getAtLeastOneIdleInstanceAndTerminateNonIdleOnes(execution.cancellationToken);
                 return {};
             }
             const instances = await this.instancePool.whenAllInstancesIdle(execution.cancellationToken);
