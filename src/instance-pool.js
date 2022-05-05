@@ -100,6 +100,9 @@ export class InstancePool{
     async getIdleInstance(cancellationToken){
         return await this.idleInstanceRequestResponseQueue.getResponse(cancellationToken);
     }
+    async getAtLeastOneIdleInstance(cancellationToken){
+        
+    }
     async whenAllInstancesIdle(cancellationToken){
         const records = this.instanceRecords.slice();
         await Promise.all(records.map(r => r.whenIdle(cancellationToken)));

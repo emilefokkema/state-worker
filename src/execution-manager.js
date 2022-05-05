@@ -13,7 +13,7 @@ export class ExecutionManager{
         this.instanceFactory = instanceFactory;
         this.baseURI = baseURI;
         this.maxNumberOfProcesses = config.maxNumberOfProcesses;
-        this.gracefulQueryCancellation = config.gracefulQueryCancellation === undefined || !config.gracefulQueryCancellation;
+        this.gracefulQueryCancellation = config.gracefulQueryCancellation === undefined || !!config.gracefulQueryCancellation;
         this.config = config;
         this.pendingExecutions = [];  
         this.executionFinished = new Event();
@@ -120,6 +120,11 @@ export class ExecutionManager{
     async executeCommand(methodName, args){
         return await this.performExecution(methodName, args, true, async (execution) => {
             this.cancelAllQueries();
+            if(!this.gracefulQueryCancellation){
+                console.log(`getting at least one idle instance to execute ${execution}...`)
+                const idleInstances = await this.instancePool.getAtLeastOneIdleInstance(execution.cancellationToken);
+                return {};
+            }
             const instances = await this.instancePool.whenAllInstancesIdle(execution.cancellationToken);
             const firstInstance = instances[0];
             firstInstance.allowIdle(false);
