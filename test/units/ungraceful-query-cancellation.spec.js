@@ -260,7 +260,7 @@ describe('when we create a state worker', () => {
             });
         });
 
-        describe('and then the first two queries resolves, so that one instance is still busy', () => {
+        describe('and then the first two queries resolve, so that one instance is still busy', () => {
 
             beforeAll(async () => {
                 firstQueryExecutionRequest.respond({result: 0});
@@ -269,13 +269,16 @@ describe('when we create a state worker', () => {
                 await secondQueryResultPromise;
             });
 
-            describe('and then we add two commands', () => {
+            describe('and then we add two commands and three more queries', () => {
                 let firstCommandExecutionRequest;
                 let firstCommandChildProcess;
 
                 beforeAll(async () => {
                     stateWorker[commandMethodName]('a');
                     stateWorker[commandMethodName]('b');
+                    stateWorker[queryMethodName](4);
+                    stateWorker[queryMethodName](5);
+                    stateWorker[queryMethodName](6);
                     ({executionRequest: firstCommandExecutionRequest, childProcess: firstCommandChildProcess} = await lifeCycle.getOrWaitForExecutionRequest());
                 });
 
