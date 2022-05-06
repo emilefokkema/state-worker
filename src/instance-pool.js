@@ -45,15 +45,27 @@ class InstanceRecord{
         this.idleAllowed = value;
     }
     performExecution(execution){
+        if(this.terminated){
+            return new Promise(() => {});
+        }
         return this.instance.performExecution(execution);
     }
     whenStarted(){
+        if(this.terminated){
+            return new Promise(() => {});
+        }
         return this.instance.whenStarted();
     }
     setState(state){
+        if(this.terminated){
+            return new Promise(() => {});
+        }
         return this.instance.setState(state);
     }
     initialize(config, baseURI, state){
+        if(this.terminated){
+            return new Promise(() => {});
+        }
         return this.instance.initialize(config, baseURI, state);
     }
     terminate(){
@@ -101,7 +113,6 @@ export class InstancePool{
     }
     terminateAllInstancesExcept(instances){
         const instancesToTerminate = this.instanceRecords.filter(r => !instances.includes(r));
-        console.log(`terminating ${instancesToTerminate.length} instance(s)`)
         for(const instanceToTerminate of instancesToTerminate){
             this.terminateInstance(instanceToTerminate);
         }
@@ -118,12 +129,18 @@ export class InstancePool{
     async getAtLeastOneIdleInstanceAndTerminateNonIdleOnes(cancellationToken){
         const alreadyIdleInstances = [];
         const promisesToRace = [];
+        const instancesThatBecameIdleLater = [];
         for(const instance of this.instanceRecords){
             const alreadyIdle = instance.idle;
-            promisesToRace.push(instance.whenIdle(cancellationToken).then(() => instance));
             if(alreadyIdle){
                 alreadyIdleInstances.push(instance);
             }
+            promisesToRace.push(instance.whenIdle(cancellationToken).then(() => {
+                if(!alreadyIdleInstances.includes(instance)){
+                    instancesThatBecameIdleLater.push(instance);
+                }
+                //return instance
+            }));
         }
         if(alreadyIdleInstances.length > 0){
             console.log(`${alreadyIdleInstances.length} instance(s) is/are already idle. terminating others and returning`)
@@ -131,9 +148,9 @@ export class InstancePool{
             return alreadyIdleInstances;
         }else{
             console.log('no instance is idle yet. waiting for one to become idle...')
-            const firstIdleInstance = await Promise.race(promisesToRace);
-            console.log('one instance has become idle')
-            const result = [firstIdleInstance];
+            await Promise.race(promisesToRace);
+            console.log(`${instancesThatBecameIdleLater.length} instance(s) has/have become idle. terminating others. (total is ${this.instanceRecords.length})`)
+            const result = instancesThatBecameIdleLater;
             this.terminateAllInstancesExcept(result);
             return result;
         }

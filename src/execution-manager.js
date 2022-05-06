@@ -41,6 +41,7 @@ export class ExecutionManager{
         }
         this.pendingExecutions.splice(index, 1);
         this.executionFinished.dispatch(execution);
+        this.createInstanceIfNecessary();
     }
     async whenExecutionHasFinished(execution, cancellationToken){
         if(!this.pendingExecutions.includes(execution)){
@@ -61,9 +62,18 @@ export class ExecutionManager{
             query.cancellationToken.cancel();
         }
     }
+    createInstanceIfNecessary(){
+        const numberOfPendingQueries = this.pendingExecutions.filter(e => !e.isCommand && !e.cancellationToken.cancelled).length;
+        const numberOfPendingCommands = this.pendingExecutions.filter(e => e.isCommand && !e.cancellationToken.cancelled).length;
+        const numberOfInstances = this.instancePool.count();
+        if(numberOfPendingQueries > numberOfInstances && numberOfInstances < this.maxNumberOfProcesses && numberOfPendingCommands === 0){
+            this.createNewInstance();
+        }
+    }
     async performExecution(methodName, args, isCommand, fn){
         const execution = new Execution(this.latestRequestId++, methodName, args, isCommand);
         this.pendingExecutions.push(execution);
+        this.createInstanceIfNecessary();
         let result;
         try{
             result = await executeAndThrowWhenCancelled(() => fn(execution), execution.cancellationToken);
@@ -104,9 +114,6 @@ export class ExecutionManager{
     }
     async executeQuery(methodName, args){
         return await this.performExecution(methodName, args, false, async (execution) => {
-            if(this.instancePool.idleCount() === 0 && this.instancePool.count() < this.maxNumberOfProcesses){
-                this.createNewInstance();
-            }
             const instance = await this.instancePool.getIdleInstance(execution.cancellationToken);
             if(execution.cancellationToken.cancelled){
                 instance.setIdle();
@@ -126,9 +133,7 @@ export class ExecutionManager{
     async executeCommand(methodName, args){
         return await this.performExecution(methodName, args, true, async (execution) => {
             this.cancelAllQueries();
-            console.log(`getting instances on which to execute ${execution}...`)
             const instances = await this.getInstancesForCommandExecution(execution.cancellationToken);
-            console.log(`received ${instances.length} instance(s) on which to execute ${execution}`)
             const firstInstance = instances[0];
             firstInstance.allowIdle(false);
             const result = await this.performExecutionOnInstance(execution, firstInstance);
