@@ -139,17 +139,13 @@ export class InstancePool{
                 if(!alreadyIdleInstances.includes(instance)){
                     instancesThatBecameIdleLater.push(instance);
                 }
-                //return instance
             }));
         }
         if(alreadyIdleInstances.length > 0){
-            console.log(`${alreadyIdleInstances.length} instance(s) is/are already idle. terminating others and returning`)
             this.terminateAllInstancesExcept(alreadyIdleInstances);
             return alreadyIdleInstances;
         }else{
-            console.log('no instance is idle yet. waiting for one to become idle...')
             await Promise.race(promisesToRace);
-            console.log(`${instancesThatBecameIdleLater.length} instance(s) has/have become idle. terminating others. (total is ${this.instanceRecords.length})`)
             const result = instancesThatBecameIdleLater;
             this.terminateAllInstancesExcept(result);
             return result;

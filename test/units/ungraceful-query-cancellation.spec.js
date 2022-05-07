@@ -1,7 +1,7 @@
 import { StateWorkerLifeCycle } from './state-worker-life-cycle';
 import { FakeChildProcessFactory } from './fake-child-process-factory';
 
-xdescribe('when we create a state worker', () => {
+describe('when we create a state worker', () => {
     const queryMethodName = 'getThings';
     const asyncQueryMethodName = 'getThingsAsync';
     const commandMethodName = 'doThings';
@@ -343,9 +343,63 @@ describe('when we create a state worker', () => {
                                 expect(secondSetStateRequest.content).toEqual(stateAfterSecondCommand);
                             });
 
-                            it('should', async () => {
-                                await new Promise(res => setTimeout(res, 100));
-                                expect(true).toBe(true);
+                            describe('and then the second child process finishes setting its state again', () => {
+                                let firstQueryAfterCommandExecutionRequest;
+                                let firstQueryAfterCommandChildProcess;
+                                let secondQueryAfterCommandExecutionRequest;
+                                let secondQueryAfterCommandChildProcess;
+                                let newChildProcessAfterCommands;
+
+                                beforeAll(async () => {
+                                    secondSetStateRequest.respond();
+                                    ({executionRequest: firstQueryAfterCommandExecutionRequest, childProcess: firstQueryAfterCommandChildProcess} = await lifeCycle.getOrWaitForExecutionRequest());
+                                    ({executionRequest: secondQueryAfterCommandExecutionRequest, childProcess: secondQueryAfterCommandChildProcess} = await lifeCycle.getOrWaitForExecutionRequest());
+                                    newChildProcessAfterCommands = await lifeCycle.getOrWaitForChildProcess();
+                                });
+
+                                it('a new child process should have been created', () => {
+                                    expect(newChildProcessAfterCommands).toBeTruthy();
+                                    expect(newChildProcessAfterCommands).not.toBe(firstChildProcess);
+                                    expect(newChildProcessAfterCommands).not.toBe(secondChildProcess);
+                                    expect(newChildProcessAfterCommands).not.toBe(thirdChildProcess);
+                                });
+
+                                it('execution of the first query after the command should have started on the first instance', () => {
+                                    expect(firstQueryAfterCommandExecutionRequest.content).toEqual({
+                                        methodName: queryMethodName,
+                                        args: [4],
+                                        id: 5
+                                    });
+                                    expect(firstQueryAfterCommandChildProcess).toBe(firstChildProcess);
+                                });
+
+                                it('execution of the second query after the command should have started on the second instance', () => {
+                                    expect(secondQueryAfterCommandExecutionRequest.content).toEqual({
+                                        methodName: queryMethodName,
+                                        args: [5],
+                                        id: 6
+                                    });
+                                    expect(secondQueryAfterCommandChildProcess).toBe(secondChildProcess);
+                                });
+
+                                describe('and then the new child process finishes initializing', () => {
+                                    let thirdQueryAfterCommandExecutionRequest;
+
+                                    beforeAll(async () => {
+                                        newChildProcessAfterCommands.started.dispatch();
+                                        const initializationRequest = await newChildProcessAfterCommands.getInitializationRequest();
+                                        initializationRequest.respond(initializationResponse);
+                                        ({executionRequest: thirdQueryAfterCommandExecutionRequest} = await lifeCycle.getOrWaitForExecutionRequest());
+                                    });
+
+                                    it('execution of the third query after the command should have started', () => {
+                                        expect(thirdQueryAfterCommandExecutionRequest.content).toEqual({
+                                            methodName: queryMethodName,
+                                            args: [6],
+                                            id: 7
+                                        });
+                                    });
+                                });
                             });
                         });
                     });
