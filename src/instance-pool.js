@@ -45,27 +45,15 @@ class InstanceRecord{
         this.idleAllowed = value;
     }
     performExecution(execution){
-        if(this.terminated){
-            return new Promise(() => {});
-        }
         return this.instance.performExecution(execution);
     }
     whenStarted(){
-        if(this.terminated){
-            return new Promise(() => {});
-        }
         return this.instance.whenStarted();
     }
     setState(state){
-        if(this.terminated){
-            return new Promise(() => {});
-        }
         return this.instance.setState(state);
     }
     initialize(config, baseURI, state){
-        if(this.terminated){
-            return new Promise(() => {});
-        }
         return this.instance.initialize(config, baseURI, state);
     }
     terminate(){
@@ -79,9 +67,6 @@ class InstanceRecord{
         this.idleRequestQueue.removeIdleRequestQueue(queue);
     }
     whenIdle(cancellationToken){
-        if(this.terminated){
-            return new Promise(() => {});
-        }
         return this.idleRequestQueue.whenIdle(cancellationToken);
     }
     setIdle(){
