@@ -68,6 +68,7 @@ Properties:
 - `maxNumberOfProcesses` (number): the maximum number of processes (web workers in the browser, worker threads in Node) that will be created
 - `path` (string): the path to the file that contains the definitions of the methods (queries and commands). In the browser, this path should either be relative to the document's baseURI, or absolute. In a Node context, it should be absolute.
 - `module` (boolean): in the context of a browser, signifies whether the script should be loaded into the web worker as a module [^2]
+- `gracefulQueryCancellation`: if `StateWorker` is currently running a query on some instance, but a command is waiting to be executed (which will always cause any running query to reject), and if this property is set to `false`, this means that `StateWorker` will not wait for the instance that is running the query to become idle, but will simply terminate the instance in question, so as to be able to begin execution of the command sooner. If `gracefulQueryCancellation` is not set, or it is set to `true`, an instance that is currently running a query that was already cancelled because of a command will not be terminated, but will be allowed to become idle before the command is run.
 
 #### StateWorker
 
