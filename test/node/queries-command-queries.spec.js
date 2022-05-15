@@ -6,7 +6,7 @@ describe('a state worker that cancels queries gracefully', () => {
     
     beforeAll(async () => {
         worker = await StateWorker.create({
-            path: path.resolve(__dirname, './examples/calculation-example.js'),
+            path: path.resolve(__dirname, './examples/expensive-calculation-example.js'),
             maxNumberOfProcesses: 3,
             gracefulQueryCancellation: true
         });
@@ -17,22 +17,27 @@ describe('a state worker that cancels queries gracefully', () => {
     })
     
     it('should handle a number of queries and a numer of commands and a number of queries', async () => {
-        worker.initialize(1);
-        const firstQueryPromise = worker.getDifferenceWith(1);
-        const secondQueryPromise = worker.getDifferenceWith(2);
-        const thirdQueryPromise = worker.getDifferenceWith(3);
+        await Promise.all([
+            worker.initialize(1),
+            worker.getDifferenceWith(1),
+            worker.getDifferenceWith(2),
+            worker.getDifferenceWith(3)
+        ])
+        const firstQueryPromise = worker.getDifferenceWith(4);
+        const secondQueryPromise = worker.getDifferenceWith(5);
+        const thirdQueryPromise = worker.getDifferenceWith(6);
         worker.multiplyBy(2);
         worker.multiplyBy(3);
-        const fourthQueryPromise = worker.getDifferenceWith(4);
-        const fifthQueryPromise = worker.getDifferenceWith(5);
-        const sixthQueryPromise = worker.getDifferenceWith(6);
+        const fourthQueryPromise = worker.getDifferenceWith(7);
+        const fifthQueryPromise = worker.getDifferenceWith(8);
+        const sixthQueryPromise = worker.getDifferenceWith(9);
         
         await expect(firstQueryPromise).rejects.toThrow('execution was cancelled');
         await expect(secondQueryPromise).rejects.toThrow('execution was cancelled');
         await expect(thirdQueryPromise).rejects.toThrow('execution was cancelled');
-        expect(await fourthQueryPromise).toEqual(-2);
-        expect(await fifthQueryPromise).toEqual(-1);
-        expect(await sixthQueryPromise).toEqual(0);
+        expect(await fourthQueryPromise).toEqual(1);
+        expect(await fifthQueryPromise).toEqual(2);
+        expect(await sixthQueryPromise).toEqual(3);
     })
 })
 
@@ -41,7 +46,7 @@ describe('a state worker that does not cancel queries gracefully', () => {
     
     beforeAll(async () => {
         worker = await StateWorker.create({
-            path: path.resolve(__dirname, './examples/calculation-example.js'),
+            path: path.resolve(__dirname, './examples/expensive-calculation-example.js'),
             maxNumberOfProcesses: 3,
             gracefulQueryCancellation: false
         });
@@ -52,22 +57,27 @@ describe('a state worker that does not cancel queries gracefully', () => {
     })
     
     it('should handle a number of queries and a numer of commands and a number of queries', async () => {
-        worker.initialize(1);
-        const firstQueryPromise = worker.getDifferenceWith(1);
-        const secondQueryPromise = worker.getDifferenceWith(2);
-        const thirdQueryPromise = worker.getDifferenceWith(3);
+        await Promise.all([
+            worker.initialize(1),
+            worker.getDifferenceWith(1),
+            worker.getDifferenceWith(2),
+            worker.getDifferenceWith(3)
+        ])
+        const firstQueryPromise = worker.getDifferenceWith(4);
+        const secondQueryPromise = worker.getDifferenceWith(5);
+        const thirdQueryPromise = worker.getDifferenceWith(6);
         worker.multiplyBy(2);
         worker.multiplyBy(3);
-        const fourthQueryPromise = worker.getDifferenceWith(4);
-        const fifthQueryPromise = worker.getDifferenceWith(5);
-        const sixthQueryPromise = worker.getDifferenceWith(6);
+        const fourthQueryPromise = worker.getDifferenceWith(7);
+        const fifthQueryPromise = worker.getDifferenceWith(8);
+        const sixthQueryPromise = worker.getDifferenceWith(9);
         
         await expect(firstQueryPromise).rejects.toThrow('execution was cancelled');
         await expect(secondQueryPromise).rejects.toThrow('execution was cancelled');
         await expect(thirdQueryPromise).rejects.toThrow('execution was cancelled');
-        expect(await fourthQueryPromise).toEqual(-2);
-        expect(await fifthQueryPromise).toEqual(-1);
-        expect(await sixthQueryPromise).toEqual(0);
+        expect(await fourthQueryPromise).toEqual(1);
+        expect(await fifthQueryPromise).toEqual(2);
+        expect(await sixthQueryPromise).toEqual(3);
     })
 })
         

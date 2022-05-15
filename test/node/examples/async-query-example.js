@@ -1,11 +1,4 @@
-function doExpensiveWork(){
-    let foo = 123;
-    let i = 0;
-    while(i < 150000000){
-        foo = (foo + 127) % 17;
-        i++;
-    }
-}
+const { doExpensiveWork } = require('./do-expensive-work')
 
 const queries = {
     async getSum(x){

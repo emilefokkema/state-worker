@@ -51,7 +51,7 @@ export function start(importer, parentProcess){
         }
     });
 
-    parentProcess.onSetStateRequested.addListener((_state, sendResponse) => {
+    parentProcess.onSetStateRequested.addListener(({state: _state}, sendResponse) => {
         state = _state;
         sendResponse();
     });

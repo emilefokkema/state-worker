@@ -14,7 +14,7 @@ export class FakeParentProcess{
         return this.onInitializationRequested.getResponse(request);
     }
     setState(state){
-        return this.onSetStateRequested.getResponse(state);
+        return this.onSetStateRequested.getResponse({state});
     }
     execute(request){
         return this.onExecutionRequested.getResponse(request);
