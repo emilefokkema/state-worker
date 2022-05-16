@@ -20,6 +20,7 @@ class IdleRequestQueue{
 class InstanceRecord{
     constructor(instance, idleRequestQueue, idleResponseQueue){
         this.instance = instance;
+        this.terminated = false;
         this.idleRequestResponseQueue = new RequestAndResponseQueue(idleRequestQueue, idleResponseQueue);
         this.idleRequestQueue = new IdleRequestQueue(this.idleRequestResponseQueue);
         instance.onIdle.addListener(() => {
@@ -57,6 +58,7 @@ class InstanceRecord{
     }
     terminate(){
         this.instance.terminate();
+        this.terminated = true;
     }
     enqueueIdleRequestQueue(){
         return this.idleRequestQueue.enqueueIdleRequestQueue();
@@ -68,6 +70,9 @@ class InstanceRecord{
         return this.idleRequestQueue.whenIdle(cancellationToken);
     }
     setIdle(){
+        if(this.terminated){
+            return;
+        }
         this.idleRequestResponseQueue.addResponse(this);
     }
 }
@@ -91,6 +96,12 @@ export class InstancePool{
             this.instanceRecords.splice(index, 1);
         }
     }
+    terminateAllInstancesExcept(instances){
+        const instancesToTerminate = this.instanceRecords.filter(r => !instances.includes(r));
+        for(const instanceToTerminate of instancesToTerminate){
+            this.terminateInstance(instanceToTerminate);
+        }
+    }
     count(){
         return this.instanceRecords.length;
     }
@@ -99,6 +110,31 @@ export class InstancePool{
     }
     async getIdleInstance(cancellationToken){
         return await this.idleInstanceRequestResponseQueue.getResponse(cancellationToken);
+    }
+    async getAtLeastOneIdleInstanceAndTerminateNonIdleOnes(cancellationToken){
+        const alreadyIdleInstances = [];
+        const promisesToRace = [];
+        const instancesThatBecameIdleLater = [];
+        for(const instance of this.instanceRecords){
+            const alreadyIdle = instance.idle;
+            if(alreadyIdle){
+                alreadyIdleInstances.push(instance);
+            }
+            promisesToRace.push(instance.whenIdle(cancellationToken).then(() => {
+                if(!alreadyIdleInstances.includes(instance)){
+                    instancesThatBecameIdleLater.push(instance);
+                }
+            }));
+        }
+        if(alreadyIdleInstances.length > 0){
+            this.terminateAllInstancesExcept(alreadyIdleInstances);
+            return alreadyIdleInstances;
+        }else{
+            await Promise.race(promisesToRace);
+            const result = instancesThatBecameIdleLater;
+            this.terminateAllInstancesExcept(result);
+            return result;
+        }
     }
     async whenAllInstancesIdle(cancellationToken){
         const records = this.instanceRecords.slice();

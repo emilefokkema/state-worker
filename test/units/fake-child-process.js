@@ -22,15 +22,24 @@ export class FakeChildProcess{
         return this.setStateRequest.request.getOrWaitForItem();
     }
     performExecution(execution){
+        if(this.hasTerminated){
+            return new Promise(() => {});
+        }
         return this.execution.getResponse(execution);
     }
     setState(state){
+        if(this.hasTerminated){
+            return new Promise(() => {});
+        }
         return this.setStateRequest.getResponse(state);
     }
     requestIdle(executionId){
         return this.onIdleRequested.getResponse({executionId});
     }
     async whenStarted(){
+        if(this.hasTerminated){
+            return new Promise(() => {});
+        }
         await new Promise(res => setTimeout(res, 0))
         if(this.hasStarted){
             return;
@@ -48,6 +57,9 @@ export class FakeChildProcess{
         this.terminated.dispatch();
     }
     initialize(config, baseURI, state){
+        if(this.hasTerminated){
+            return new Promise(() => {});
+        }
         return this.initialization.getResponse({config, baseURI, state});
     }
 }
