@@ -21,7 +21,6 @@ describe('a state worker', () => {
             worker.getSum(7),
             worker.getSum(8)
         ]);
-        await new Promise(res => setTimeout(res, 1000))
         expect(await resultPromise).toEqual([
             2, 3, 4, 5, 6, 7, 8, 9
         ])

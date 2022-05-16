@@ -40,7 +40,8 @@ describe('when we create a state worker', () => {
         it('should have asked to execute the first request', () => {
             expect(firstExecutionRequest.content).toEqual({
                 methodName: queryMethodName,
-                args: [1]
+                args: [1],
+                id: 0
             })
         });
 
@@ -53,22 +54,15 @@ describe('when we create a state worker', () => {
                 actualRequest1Response = await request1ResultPromise;
             });
 
-            it('no further instances should have been created yet', () => {
-                expect(lifeCycle.getAllChildProcesses().length).toBe(0);
-            });
-
             it('the first request should have resolved', () => {
                 expect(actualRequest1Response).toEqual(expectedRequest1Response)
             });
 
-            describe('and then the first instance returns its state', () => {
-                const state = 42;
+            describe('and then we wait for another execution request', () => {
                 let secondExecutionRequest;
                 let secondExecutionRequestChildProcess;
 
                 beforeAll(async () => {
-                    const stateRequest = await firstExecutionRequestChildProcess.getStateRequest();
-                    stateRequest.respond(state);
                     const {childProcess, executionRequest} = await lifeCycle.getOrWaitForExecutionRequest();
                     secondExecutionRequest = executionRequest;
                     secondExecutionRequestChildProcess = childProcess;
@@ -78,7 +72,8 @@ describe('when we create a state worker', () => {
                     expect(secondExecutionRequestChildProcess).toBe(firstExecutionRequestChildProcess);
                     expect(secondExecutionRequest.content).toEqual({
                         methodName: queryMethodName,
-                        args: [2]
+                        args: [2],
+                        id: 1
                     })
                 });
 
@@ -110,10 +105,10 @@ describe('when we create a state worker', () => {
 
                         it('there should be two new initialization requests', () => {
                             expect(secondInitializationRequest.content).toEqual({
-                                config, baseURI, state
+                                config, baseURI
                             });
                             expect(thirdInitializationRequest.content).toEqual({
-                                config, baseURI, state
+                                config, baseURI
                             });
                         });
 
@@ -132,7 +127,8 @@ describe('when we create a state worker', () => {
                                 expect(thirdExecutionRequestChildProcess).toBe(secondChildProcess);
                                 expect(thirdExecutionRequest.content).toEqual({
                                     methodName: queryMethodName,
-                                    args: [3]
+                                    args: [3],
+                                    id: 2
                                 })
                             });
 
@@ -151,7 +147,8 @@ describe('when we create a state worker', () => {
                                     expect(fourthExecutionRequestChildProcess).toBe(thirdChildProcess);
                                     expect(fourthExecutionRequest.content).toEqual({
                                         methodName: queryMethodName,
-                                        args: [4]
+                                        args: [4],
+                                        id: 3
                                     })
                                 });
 

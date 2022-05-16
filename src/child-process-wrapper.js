@@ -13,18 +13,24 @@ class ChildProcessWrapper{
         this.requestTarget = new RequestTarget(childProcess);
         const requestSource = new RequestSource(childProcess);
         this.onIdleRequested = filter(requestSource, ({type}) => type === 'requestIdle');
+        this.hasStarted = false;
+        getNext(this.startedMessage).then(() => {this.hasStarted = true;});
     }
     terminate(){
         this.childProcess.terminate();
     }
-    whenStarted(){
+    async whenStarted(){
+        await new Promise(res => setTimeout(res, 0))
+        if(this.hasStarted){
+            return;
+        }
         return getNext(this.startedMessage);
     }
-    getState(){
-        return this.requestTarget.getResponse({type: 'state'});
+    setState(state){
+        return this.requestTarget.getResponse({type: 'setState', state});
     }
     performExecution(execution){
-        return this.requestTarget.getResponse({type: 'execution', methodName: execution.methodName, args: execution.args});
+        return this.requestTarget.getResponse({type: 'execution', methodName: execution.methodName, args: execution.args, id: execution.id});
     }
     initialize(config, baseURI, state){
         return this.requestTarget.getResponse({type: 'initialize', config, baseURI, state});

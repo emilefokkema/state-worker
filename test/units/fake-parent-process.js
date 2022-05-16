@@ -7,17 +7,17 @@ export class FakeParentProcess{
         this.idle = new Event();
         this.idleRequest = new RequestAndResponse();
         this.onExecutionRequested = new RequestAndResponse();
-        this.onStateRequested = new RequestAndResponse();
         this.onInitializationRequested = new RequestAndResponse();
+        this.onSetStateRequested = new RequestAndResponse();
     }
     initialize(request){
         return this.onInitializationRequested.getResponse(request);
     }
+    setState(state){
+        return this.onSetStateRequested.getResponse(state);
+    }
     execute(request){
         return this.onExecutionRequested.getResponse(request);
-    }
-    getState(){
-        return this.onStateRequested.getResponse();
     }
     notifyStarted(){
         this.started.dispatch();
@@ -25,7 +25,7 @@ export class FakeParentProcess{
     notifyIdle(){
         this.idle.dispatch();
     }
-    requestIdle(){
-        return this.idleRequest.getResponse();
+    requestIdle(executionId){
+        return this.idleRequest.getResponse({executionId});
     }
 }

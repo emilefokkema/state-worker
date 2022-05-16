@@ -8,28 +8,34 @@ export class FakeChildProcess{
         this.started = new Event();
         this.terminated = new Event();
         this.initialization = new RequestAndResponse();
-        this.state = new RequestAndResponse();
         this.execution = new RequestAndResponse();
         this.onIdleRequested = new RequestAndResponse();
+        this.setStateRequest = new RequestAndResponse();
         this.onIdle = new Event();
+        this.hasStarted = false;
+        getNext(this.started).then(() => {this.hasStarted = true;})
     }
     getInitializationRequest(){
         return this.initialization.request.getOrWaitForItem();
     }
-    getStateRequest(){
-        return this.state.request.getOrWaitForItem();
-    }
-    getState(){
-        return this.state.getResponse();
+    getSetStateRequest(){
+        return this.setStateRequest.request.getOrWaitForItem();
     }
     performExecution(execution){
         return this.execution.getResponse(execution);
     }
-    requestIdle(){
-        return this.onIdleRequested.getResponse();
+    setState(state){
+        return this.setStateRequest.getResponse(state);
     }
-    whenStarted(){
-        return getNext(this.started);
+    requestIdle(executionId){
+        return this.onIdleRequested.getResponse({executionId});
+    }
+    async whenStarted(){
+        await new Promise(res => setTimeout(res, 0))
+        if(this.hasStarted){
+            return;
+        }
+        await getNext(this.started);
     }
     async whenTerminated(){
         if(this.hasTerminated){
