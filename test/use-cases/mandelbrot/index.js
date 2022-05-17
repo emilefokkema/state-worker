@@ -28,14 +28,18 @@
         }
         return result;
     }
+    function isNearEdge(x, y, width, height, edgeWidth){
+        return x < edgeWidth || y < edgeWidth || height - y < edgeWidth || width - x < edgeWidth;
+    }
     async function init(){
         const canvasElement = document.getElementById('canvas');
+        const canvasRect = canvasElement.getBoundingClientRect();
+        const canvasWidth = Math.floor(canvasRect.width) * devicePixelRatio;
+        const canvasHeight = Math.floor(canvasRect.height) * devicePixelRatio;
+        canvasElement.width = canvasWidth;
+        canvasElement.height = canvasHeight;
         const context = canvasElement.getContext('2d');
-        const canvasWidth = canvasElement.width;
-        const canvasHeight = canvasElement.height;
         const ratio = canvasHeight / canvasWidth;
-
-        
 
         const tiles = getTiles(canvasWidth, canvasHeight, 50);
 
@@ -47,6 +51,16 @@
         let viewboxLeft = -1;
         let viewboxWidth = 2;
         let viewboxTop = ratio;
+        canvasElement.addEventListener('mousemove', (e) => {
+            const canvasRectX = e.clientX - canvasRect.x;
+            const canvasRectY = e.clientY - canvasRect.y;
+            const nearEdge = isNearEdge(canvasRectX, canvasRectY, canvasRect.width, canvasRect.height, 20);
+            if(nearEdge && !canvasElement.classList.contains('mouse-edge')){
+                canvasElement.classList.add('mouse-edge')
+            }else if(!nearEdge && canvasElement.classList.contains('mouse-edge')){
+                canvasElement.classList.remove('mouse-edge');
+            }
+        });
         await worker.initialize(viewboxLeft, viewboxTop, viewboxWidth / canvasWidth);
         draw();
 
