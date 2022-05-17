@@ -1,6 +1,8 @@
 const StateWorker = require('../../dist/state-worker');
 const path = require('path');
 
+jest.setTimeout(10000);
+
 describe('a state worker that cancels queries gracefully', () => {
     let worker;
     
