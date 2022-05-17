@@ -1,7 +1,7 @@
 {
   "name": "state-worker",
   "version": "0.0.1-alpha",
-  "description": "Share a state between processes, change it an query it",
+  "description": "Share a state between processes, change it and query it",
   "main": "dist/state-worker.js",
   "scripts": {
     "test": "npm run test-units && npm run build-dev && npm run test-node && npm run test-web",
