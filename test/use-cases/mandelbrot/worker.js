@@ -1,17 +1,14 @@
 queries = {
-    getTile({x, y, width, height}){
+    getTile(left, top, size){
 
-    },
-    getSomething(){
-        return 5;
     }
 };
 
 commands = {
-    setViewbox(viewbox){
-        (this.state || (this.state = {})).viewbox = viewbox;
-    },
-    setSize(size){
-        (this.state || (this.state = {})).size = size;
+    initialize(viewboxLeft, viewboxTop, pixelWidth){
+        this.state = this.state || {};
+        this.state.viewboxLeft = viewboxLeft;
+        this.state.viewboxTop = viewboxTop;
+        this.state.pixelWidth = pixelWidth;
     }
 };
