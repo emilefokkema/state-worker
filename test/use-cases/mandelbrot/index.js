@@ -6,10 +6,14 @@
             this.size = size;
         }
         async draw(context, worker){
-            const buffer = await worker.getTile(this.left, this.top, this.size);
-            const array = new Uint8ClampedArray(buffer);
-            const imageData = new ImageData(array, this.size, this.size);
-            context.putImageData(imageData, this.left, this.top);
+            try{
+                const buffer = await worker.getTile(this.left, this.top, this.size);
+                const array = new Uint8ClampedArray(buffer);
+                const imageData = new ImageData(array, this.size, this.size);
+                context.putImageData(imageData, this.left, this.top);
+            }catch(e){
+
+            }
         }
     }
     function getTiles(width, height, size){
@@ -40,30 +44,60 @@
         canvasElement.height = canvasHeight;
         const context = canvasElement.getContext('2d');
         const ratio = canvasHeight / canvasWidth;
+        const zoomEdgeWidth = 20;
+        const zoomFactor = 2;
 
         const tiles = getTiles(canvasWidth, canvasHeight, 50);
 
         const worker = await StateWorker.create({
             path: 'mandelbrot/worker.js',
-            maxNumberOfProcesses: 3
+            maxNumberOfProcesses: 5,
+            gracefulQueryCancellation: true
         });
 
         let viewboxLeft = -1;
         let viewboxWidth = 2;
         let viewboxTop = ratio;
+        canvasElement.addEventListener('click', (e) => {
+            const canvasRectX = e.clientX - canvasRect.x;
+            const canvasRectY = e.clientY - canvasRect.y;
+            const nearEdge = isNearEdge(canvasRectX, canvasRectY, canvasRect.width, canvasRect.height, zoomEdgeWidth);
+            const viewboxCanvasRatio = viewboxWidth / canvasRect.width;
+            const viewboxX = viewboxLeft + canvasRectX * viewboxCanvasRatio;
+            const viewboxY = viewboxTop - canvasRectY * viewboxCanvasRatio;
+            if(nearEdge){
+                zoomOut();
+            }else{
+                zoomIn(viewboxX, viewboxY);
+            }
+        });
         canvasElement.addEventListener('mousemove', (e) => {
             const canvasRectX = e.clientX - canvasRect.x;
             const canvasRectY = e.clientY - canvasRect.y;
-            const nearEdge = isNearEdge(canvasRectX, canvasRectY, canvasRect.width, canvasRect.height, 20);
+            const nearEdge = isNearEdge(canvasRectX, canvasRectY, canvasRect.width, canvasRect.height, zoomEdgeWidth);
             if(nearEdge && !canvasElement.classList.contains('mouse-edge')){
                 canvasElement.classList.add('mouse-edge')
             }else if(!nearEdge && canvasElement.classList.contains('mouse-edge')){
                 canvasElement.classList.remove('mouse-edge');
             }
         });
+
         await worker.initialize(viewboxLeft, viewboxTop, viewboxWidth / canvasWidth);
         draw();
-
+        function zoomIn(x, y){
+            viewboxLeft = x - (x - viewboxLeft) / zoomFactor;
+            viewboxTop = y + (viewboxTop - y) / zoomFactor;
+            viewboxWidth = viewboxWidth / zoomFactor;
+            worker.initialize(viewboxLeft, viewboxTop, viewboxWidth / canvasWidth);
+            draw();
+        }
+        function zoomOut(){
+            viewboxLeft = viewboxLeft + viewboxWidth * (1 - zoomFactor) / 2;
+            viewboxTop = viewboxTop + viewboxWidth * ratio * (zoomFactor - 1) / 2;
+            viewboxWidth = viewboxWidth * zoomFactor;
+            worker.initialize(viewboxLeft, viewboxTop, viewboxWidth / canvasWidth);
+            draw();
+        }
         function draw(){
             for(let tile of tiles){
                 tile.draw(context, worker);

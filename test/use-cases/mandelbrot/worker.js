@@ -18,7 +18,7 @@ function escapeStep(x, y, maxIt){
 }
 
 function getColor(x, y){
-    const {step, moduloSquare} = escapeStep(x, y, 500);
+    const {step, moduloSquare} = escapeStep(x, y, 1500);
     const normalizedStep = step + 1 - Math.log(Math.log(moduloSquare) / (2 * log2)) / log2;
     const lightness = moduloSquare < 4 ? 0 : 0.5 * (1 + Math.sin(normalizedStep / 20));
     const gray = Math.floor(255 * lightness);
