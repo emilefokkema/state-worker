@@ -1,4 +1,5 @@
 # StateWorker
+[![npm version](https://badge.fury.io/js/state-worker.svg)](https://badge.fury.io/js/state-worker)
 ## About
 Runs an instance[^1] across multiple processes, allowing for parallel computation. Works both in the browser and in Node.js.
 ## Queries and commands
